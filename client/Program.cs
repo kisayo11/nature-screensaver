@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace NatureScreensaver;
@@ -18,7 +19,12 @@ internal static class Program
             MessageBox.Show("Nature Screensaver settings are controlled by config.json.", "Nature Screensaver");
             return;
         }
-        if (mode.StartsWith("/p")) return;
+        if (mode.StartsWith("/p"))
+        {
+            var parent = args.Length > 1 && long.TryParse(args[1], out var handle) ? new IntPtr(handle) : IntPtr.Zero;
+            Application.Run(new ScreensaverForm(parent));
+            return;
+        }
         Application.Run(new ScreensaverForm());
     }
 }
@@ -31,25 +37,29 @@ public sealed class ScreensaverForm : Form
     private readonly System.Windows.Forms.Timer _syncTimer = new();
     private readonly string _baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NatureScreensaver");
     private readonly string _cacheDir;
+    private readonly IntPtr _previewParent;
     private Config _config = Config.Default();
     private List<string> _images = [];
     private int _index = -1;
     private Point _startMouse;
 
-    public ScreensaverForm()
+    public ScreensaverForm(IntPtr previewParent = default)
     {
+        _previewParent = previewParent;
         _cacheDir = Path.Combine(_baseDir, "cache");
         Directory.CreateDirectory(_cacheDir);
         FormBorderStyle = FormBorderStyle.None;
-        WindowState = FormWindowState.Maximized;
-        TopMost = true;
+        WindowState = _previewParent == IntPtr.Zero ? FormWindowState.Maximized : FormWindowState.Normal;
+        TopMost = _previewParent == IntPtr.Zero;
+        ShowInTaskbar = _previewParent == IntPtr.Zero;
         BackColor = Color.Black;
-        Cursor.Hide();
+        if (_previewParent == IntPtr.Zero) Cursor.Hide();
         Controls.Add(_picture);
         Controls.Add(_notice);
         KeyDown += (_, _) => Close();
         MouseDown += (_, _) => Close();
         MouseMove += (_, e) => { if (_startMouse != Point.Empty && Distance(_startMouse, e.Location) > 8) Close(); };
+        Load += (_, _) => AttachPreviewWindow();
         Shown += async (_, _) => { _startMouse = PointToClient(Cursor.Position); await SyncAndStart(); };
         _slideTimer.Tick += (_, _) => ShowNext();
         _syncTimer.Tick += async (_, _) => await SyncAndStart(false);
@@ -57,6 +67,17 @@ public sealed class ScreensaverForm : Form
 
     private async Task SyncAndStart(bool startTimers = true)
     {
+        await LoadLastConfig();
+        RefreshImageList();
+        ApplyConfigToTimers();
+
+        if (startTimers)
+        {
+            ShowNext();
+            _slideTimer.Start();
+            _syncTimer.Start();
+        }
+
         try
         {
             var settings = await LoadLocalSettings();
@@ -64,30 +85,54 @@ public sealed class ScreensaverForm : Form
             {
                 using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
                 var remote = await http.GetFromJsonAsync<Config>(settings.ConfigUrl);
-                if (remote?.Slides?.Count > 0 && remote.Version != _config.Version)
+                if (remote?.Slides?.Count > 0 && ShouldDownload(remote))
                 {
                     await DownloadSlides(http, remote);
                     _config = remote;
                     await WriteJson(Path.Combine(_baseDir, "last-config.json"), remote);
+                    RefreshImageList();
+                    ApplyConfigToTimers();
+                    if (_picture.Image == null) ShowNext();
                 }
             }
         }
         catch
         {
-            var last = Path.Combine(_baseDir, "last-config.json");
-            if (File.Exists(last)) _config = await ReadJson<Config>(last) ?? _config;
+            RefreshImageList();
+            if (_picture.Image == null) ShowNext();
         }
+    }
 
+    private async Task LoadLastConfig()
+    {
+        var last = Path.Combine(_baseDir, "last-config.json");
+        if (File.Exists(last)) _config = await ReadJson<Config>(last) ?? _config;
+    }
+
+    private bool ShouldDownload(Config remote)
+    {
+        if (remote.Version != _config.Version) return true;
+        return remote.Slides.Any(s => !File.Exists(Path.Combine(_cacheDir, s.FileName)));
+    }
+
+    private void RefreshImageList()
+    {
         _images = Directory.GetFiles(_cacheDir, "*.png").OrderBy(Path.GetFileName).ToList();
+    }
+
+    private void ApplyConfigToTimers()
+    {
         _notice.Text = string.IsNullOrWhiteSpace(_config.Notice) ? "Nature Screensaver" : _config.Notice;
         _slideTimer.Interval = Math.Max(5, _config.SlideDurationSeconds) * 1000;
         _syncTimer.Interval = Math.Max(5, _config.UpdateIntervalMinutes) * 60 * 1000;
-        if (startTimers)
-        {
-            ShowNext();
-            _slideTimer.Start();
-            _syncTimer.Start();
-        }
+    }
+
+    private void AttachPreviewWindow()
+    {
+        if (_previewParent == IntPtr.Zero) return;
+        SetParent(Handle, _previewParent);
+        GetClientRect(_previewParent, out var rect);
+        Bounds = new Rectangle(0, 0, rect.Right - rect.Left, rect.Bottom - rect.Top);
     }
 
     private async Task<LocalSettings> LoadLocalSettings()
@@ -153,6 +198,21 @@ public sealed class ScreensaverForm : Form
         var dx = a.X - b.X;
         var dy = a.Y - b.Y;
         return Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetParent(IntPtr child, IntPtr newParent);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetClientRect(IntPtr hWnd, out RECT rect);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
     }
 }
 
