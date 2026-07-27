@@ -44,6 +44,20 @@ This PC currently has .NET Runtime only, not .NET SDK. Install .NET 8 SDK to bui
 For a smaller installer, use framework-dependent publish. Target PCs need .NET Desktop Runtime 8.
 
 
+
+## Admin web MVP features
+
+The Vercel admin web provides these static, browser-only tools:
+
+- Korean operator UI
+- slide order editing
+- Google Drive share-link to direct-download URL conversion
+- config validation before generation
+- preview list
+- browser draft autosave
+- automatic version stamp
+- copy and download config.json
+
 ## Vercel admin web
 
 The admin web is deployed with Vercel from the private GitHub repository.

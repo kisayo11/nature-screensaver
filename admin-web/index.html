@@ -3,26 +3,76 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Nature Screensaver Admin</title>
+  <title>&#45348;&#51060;&#52376; &#51064;&#51613; &#54868;&#47732;&#48372;&#54840;&#44592; &#44288;&#47532;&#51088;</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main>
-    <h1>Nature Screensaver Admin</h1>
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">Nature Screensaver</p>
+        <h1>&#45348;&#51060;&#52376; &#51064;&#51613; &#54868;&#47732;&#48372;&#54840;&#44592; &#44288;&#47532;&#51088;</h1>
+      </div>
+      <div class="status" id="status">&#45824;&#44592; &#51473;</div>
+    </header>
+
     <section class="panel">
-      <label>Version <input id="version" value="2026.07.27.001" /></label>
-      <label>Update interval minutes <input id="interval" type="number" value="60" min="5" /></label>
-      <label>Slide duration seconds <input id="duration" type="number" value="20" min="5" /></label>
-      <label>Notice <input id="notice" value="Nature accreditation reminder" /></label>
+      <div class="panel-title">
+        <h2>&#48176;&#54252; &#49444;&#51221;</h2>
+        <button id="newVersion" type="button" class="secondary">&#48260;&#51204; &#51088;&#46041;&#49373;&#49457;</button>
+      </div>
+      <div class="grid four">
+        <label>&#48176;&#54252; &#48260;&#51204; <input id="version" value="2026.07.27.001" /></label>
+        <label>&#50629;&#45936;&#51060;&#53944; &#51452;&#44592;(&#48516;) <input id="interval" type="number" value="60" min="5" /></label>
+        <label>&#49836;&#46972;&#51060;&#46300; &#54364;&#49884;&#49884;&#44036;(&#52488;) <input id="duration" type="number" value="20" min="5" /></label>
+        <label>&#54616;&#45800; &#44277;&#51648; <input id="notice" value="4&#51452;&#44592; &#51064;&#51613; &#51456;&#48708;" /></label>
+      </div>
     </section>
+
     <section class="panel">
-      <div class="toolbar"><h2>Slides</h2><button id="add">Add</button></div>
-      <table id="slides"><thead><tr><th>Order</th><th>Title</th><th>File name</th><th>Google Drive download URL</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="panel-title">
+        <div>
+          <h2>&#49836;&#46972;&#51060;&#46300; &#47785;&#47197;</h2>
+          <p class="hint">&#54028;&#51068;&#47749; &#49692;&#49436;&#50752; &#54364; &#49692;&#49436;&#47484; &#47582;&#52628;&#47732; PC &#54868;&#47732;&#48372;&#54840;&#44592;&#50640;&#49436; &#44536;&#45824;&#47196; &#51116;&#49373;&#46121;&#45768;&#45796;.</p>
+        </div>
+        <div class="actions">
+          <button id="add" type="button">&#49836;&#46972;&#51060;&#46300; &#52628;&#44032;</button>
+          <button id="renumber" type="button" class="secondary">&#49692;&#49436; &#51116;&#51221;&#47148;</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="slides">
+          <thead>
+            <tr>
+              <th>&#49692;&#49436;</th>
+              <th>&#51228;&#47785;</th>
+              <th>&#54028;&#51068;&#47749;</th>
+              <th>&#44396;&#44544;&#46300;&#46972;&#51060;&#48652; &#47553;&#53356;</th>
+              <th>&#44288;&#47532;</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
-    <section class="panel">
-      <button id="make">Generate config.json</button>
-      <textarea id="output" spellcheck="false"></textarea>
-      <p class="hint">Save generated JSON as config.json, upload it to Google Drive, and enable link sharing.</p>
+
+    <section class="panel split">
+      <div>
+        <div class="panel-title"><h2>&#48120;&#47532;&#48372;&#44592;</h2></div>
+        <ol id="preview" class="preview"></ol>
+      </div>
+      <div>
+        <div class="panel-title">
+          <h2>config.json</h2>
+          <div class="actions">
+            <button id="make" type="button">&#49373;&#49457;</button>
+            <button id="copy" type="button" class="secondary">&#48373;&#49324;</button>
+            <button id="download" type="button" class="secondary">&#45796;&#50868;&#47196;&#46300;</button>
+          </div>
+        </div>
+        <textarea id="output" spellcheck="false" placeholder="&#49373;&#49457; &#48260;&#53948;&#51012; &#45572;&#47476;&#47732; config.json &#45236;&#50857;&#51060; &#54364;&#49884;&#46121;&#45768;&#45796;."></textarea>
+        <p class="hint">&#49373;&#49457;&#46108; JSON&#51012; <code>config.json</code>&#51004;&#47196; &#51200;&#51109;&#54644; &#44396;&#44544;&#46300;&#46972;&#51060;&#48652;&#50640; &#47553;&#53356;&#44277;&#50976;&#47196; &#50629;&#47196;&#46300;&#54633;&#45768;&#45796;.</p>
+      </div>
     </section>
   </main>
   <script src="app.js"></script>
