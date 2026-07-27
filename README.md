@@ -1,4 +1,4 @@
-# Nature Screensaver
+﻿# Nature Screensaver
 
 Lightweight Windows screensaver project for hospital accreditation reminder slides.
 
@@ -44,11 +44,20 @@ This PC currently has .NET Runtime only, not .NET SDK. Install .NET 8 SDK to bui
 For a smaller installer, use framework-dependent publish. Target PCs need .NET Desktop Runtime 8.
 
 
-## GitHub Actions
+## Vercel admin web
 
-This project includes two starter workflows.
+The admin web is deployed with Vercel from the private GitHub repository.
 
-- `.github/workflows/deploy-admin-web.yml`: deploys `admin-web` to GitHub Pages.
-- `.github/workflows/validate-config.yml`: validates `config.sample.json` and `published-config.json`.
+Production URL:
 
-See `docs/github-actions-setup.md` for setup steps.
+```text
+https://nature-screensaver.vercel.app
+```
+
+Vercel project:
+
+```text
+kisayo11s-projects/nature-screensaver
+```
+
+GitHub Actions still validates config JSON. GitHub Pages deployment is not used because private repository Pages is not available on the current GitHub plan.

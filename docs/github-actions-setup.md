@@ -1,4 +1,4 @@
-# GitHub Actions setup
+﻿# GitHub Actions setup
 
 ## Recommended repository flow
 
@@ -31,3 +31,15 @@ For MVP operation:
 ## Next possible workflow
 
 A later workflow can build the Windows client on GitHub Actions and attach installer artifacts to GitHub Releases.
+
+## Vercel deployment status
+
+GitHub Pages deployment was replaced with Vercel because private repository Pages is not supported on the current GitHub plan.
+
+Production admin web:
+
+```text
+https://nature-screensaver.vercel.app
+```
+
+Future pushes to the connected GitHub repository can be deployed through the Vercel Git integration.

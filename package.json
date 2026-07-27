@@ -1,0 +1,9 @@
+{
+  "name": "nature-screensaver-admin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "check:admin": "node --check admin-web/app.js",
+    "check:config": "node scripts/validate-config.js"
+  }
+}

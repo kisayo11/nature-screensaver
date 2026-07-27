@@ -12,3 +12,5 @@ installer/Output/
 Thumbs.db
 .vscode/
 .idea/
+.vercel
+.env*
