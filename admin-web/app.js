@@ -499,6 +499,30 @@ document.querySelector("#download").addEventListener("click", () => {
   URL.revokeObjectURL(a.href);
   setStatus(text.downloaded, "success");
 });
-document.querySelectorAll("#version,#interval,#duration,#notice").forEach(input => input.addEventListener("input", refresh));
+/* ----------------------------------------------------
+   Google Apps Script 세팅 가이드 모달
+---------------------------------------------------- */
+const gasGuideModal = document.querySelector("#gasGuideModal");
+const openGasGuideBtn = document.querySelector("#openGasGuide");
+const gasGuideCloseBtn = document.querySelector("#gasGuideClose");
+const gasGuideOkBtn = document.querySelector("#gasGuideOk");
+const copyGasCodeBtn = document.querySelector("#copyGasCode");
+
+if (openGasGuideBtn && gasGuideModal) {
+  openGasGuideBtn.addEventListener("click", () => { gasGuideModal.hidden = false; });
+  gasGuideCloseBtn.addEventListener("click", () => { gasGuideModal.hidden = true; });
+  gasGuideOkBtn.addEventListener("click", () => { gasGuideModal.hidden = true; });
+}
+
+if (copyGasCodeBtn) {
+  copyGasCodeBtn.addEventListener("click", async () => {
+    const code = document.querySelector("#gasCodeBlock code")?.textContent;
+    if (code) {
+      await navigator.clipboard.writeText(code);
+      copyGasCodeBtn.textContent = "✅ 복사 완료!";
+      setTimeout(() => { copyGasCodeBtn.textContent = "📋 코드 복사"; }, 2000);
+    }
+  });
+}
 
 loadDraft();

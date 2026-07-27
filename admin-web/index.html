@@ -23,7 +23,7 @@
     <section class="panel gas-config-panel">
       <div class="panel-title">
         <h2>⚡ 구글 드라이브 자동 업로드 연동</h2>
-        <a href="../docs/google-apps-script-setup.md" target="_blank" class="help-link">📖 1분 세팅 가이드 문서</a>
+        <button id="openGasGuide" type="button" class="help-link-btn">📖 1분 세팅 가이드 보기</button>
       </div>
       <div class="gas-input-wrap">
         <label for="gasUrl">Google Apps Script Web App URL
@@ -163,6 +163,65 @@ https://drive.google.com/file/d/.../view"></textarea>
         <button id="simPrev" type="button" class="sim-btn">◀ 이전</button>
         <button id="simToggle" type="button" class="sim-btn accent">⏸ 일시정지</button>
         <button id="simNext" type="button" class="sim-btn">다음 ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Apps Script 1분 세팅 가이드 모달 -->
+  <div id="gasGuideModal" class="modal-overlay" hidden>
+    <div class="modal-card wide">
+      <div class="modal-header">
+        <h3>📖 구글 드라이브 자동 업로드 1분 세팅 가이드</h3>
+        <button id="gasGuideClose" type="button" class="icon-btn">&times;</button>
+      </div>
+      <div class="modal-body guide-body">
+        <div class="guide-step">
+          <h4>1단계: Google Apps Script 생성 (1분 소요)</h4>
+          <ol>
+            <li><a href="https://script.google.com" target="_blank" class="link-btn">Google Apps Script(script.google.com)</a> 에 접속 후 <strong>[새 프로젝트]</strong> 클릭.</li>
+            <li>기존 코드를 지우고 아래의 스크립트 코드를 붙여넣습니다:</li>
+          </ol>
+          <div class="code-box">
+            <div class="code-header">
+              <span>Google Apps Script 코드</span>
+              <button id="copyGasCode" type="button" class="small secondary">📋 코드 복사</button>
+            </div>
+            <pre id="gasCodeBlock"><code>function doPost(e) {
+  try {
+    // 구글 드라이브의 config.json 파일 ID를 아래 입력하세요.
+    // 예: https://drive.google.com/file/d/1A2B3C4D5E.../view 이라면 1A2B3C4D5E... 가 FILE_ID입니다.
+    var TARGET_FILE_ID = "여기에_구글드라이브_CONFIG_JSON_파일ID_입력";
+    
+    var jsonString = e.postData.contents;
+    var file = DriveApp.getFileById(TARGET_FILE_ID);
+    file.setContent(jsonString);
+    
+    return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "config.json updated successfully" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <h4>2단계: 웹앱으로 배포하기</h4>
+          <ol>
+            <li>우측 상단 <strong>[배포] ➔ [새 배포]</strong> 클릭 후 톱니바퀴에서 <strong>[웹 앱]</strong> 선택.</li>
+            <li>설정: <strong>다음 사용자 권한으로 실행</strong> ➔ <code>나</code> / <strong>액세스 권한 있는 사용자</strong> ➔ <code>모든 사용자(Anyone)</code></li>
+            <li><strong>[배포]</strong> 클릭 ➔ 구글 권한 승인 진행 ➔ 생성된 <strong>웹 앱 URL</strong> (https://script.google.com/macros/s/.../exec) 복사.</li>
+          </ol>
+        </div>
+
+        <div class="guide-step">
+          <h4>3단계: 어드민 웹에 연동하기</h4>
+          <p>복사한 URL을 어드민 상단의 <strong>Google Apps Script Web App URL</strong> 칸에 붙여넣으면 연동 완료!</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="gasGuideOk" type="button">확인 완료</button>
       </div>
     </div>
   </div>
