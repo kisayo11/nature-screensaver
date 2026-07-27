@@ -3,64 +3,90 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>&#45348;&#51060;&#52376; &#51064;&#51613; &#54868;&#47732;&#48372;&#54840;&#44592; &#44288;&#47532;&#51088;</title>
+  <title>네이처 인증 화면보호기 관리자</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main>
     <header class="page-head">
       <div>
-        <p class="eyebrow">Nature Screensaver</p>
-        <h1>&#45348;&#51060;&#52376; &#51064;&#51613; &#54868;&#47732;&#48372;&#54840;&#44592; &#44288;&#47532;&#51088;</h1>
+        <p class="eyebrow">Nature Screensaver Admin</p>
+        <h1>네이처 인증 화면보호기 관리자</h1>
       </div>
-      <div class="status" id="status">&#45824;&#44592; &#51473;</div>
+      <div class="head-actions">
+        <button id="openSimulator" type="button" class="accent-glow">📺 화면보호기 미리보기</button>
+        <div class="status" id="status">대기 중</div>
+      </div>
     </header>
 
-    <section class="panel">
+    <!-- 구글 드라이브 자동 업로드 연동 설정 -->
+    <section class="panel gas-config-panel">
       <div class="panel-title">
-        <h2>&#48176;&#54252; &#49444;&#51221;</h2>
-        <button id="newVersion" type="button" class="secondary">&#48260;&#51204; &#51088;&#46041;&#49373;&#49457;</button>
+        <h2>⚡ 구글 드라이브 자동 업로드 연동</h2>
+        <a href="../docs/google-apps-script-setup.md" target="_blank" class="help-link">📖 1분 세팅 가이드 문서</a>
       </div>
-      <div class="grid four">
-        <label>&#48176;&#54252; &#48260;&#51204; <input id="version" value="2026.07.27.001" /></label>
-        <label>&#50629;&#45936;&#51060;&#53944; &#51452;&#44592;(&#48516;) <input id="interval" type="number" value="60" min="5" /></label>
-        <label>&#49836;&#46972;&#51060;&#46300; &#54364;&#49884;&#49884;&#44036;(&#52488;) <input id="duration" type="number" value="20" min="5" /></label>
-        <label>&#54616;&#45800; &#44277;&#51648; <input id="notice" value="4&#51452;&#44592; &#51064;&#51613; &#51456;&#48708;" /></label>
+      <div class="gas-input-wrap">
+        <label for="gasUrl">Google Apps Script Web App URL
+          <input id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec" spellcheck="false" />
+        </label>
+        <p class="hint">Apps Script URL을 연동해두면 <strong>[구글 드라이브에 config.json 업로드]</strong> 버튼 한 번으로 파일이 자동 덮어쓰기 됩니다.</p>
       </div>
     </section>
 
+    <!-- 배포 설정 -->
+    <section class="panel">
+      <div class="panel-title">
+        <h2>배포 설정</h2>
+        <button id="newVersion" type="button" class="secondary">버전 자동생성</button>
+      </div>
+      <div class="grid four">
+        <label>배포 버전 <input id="version" value="2026.07.27.001" /></label>
+        <label>업데이트 주기(분) <input id="interval" type="number" value="60" min="5" /></label>
+        <label>슬라이드 표시시간(초) <input id="duration" type="number" value="20" min="5" /></label>
+        <label>하단 공지 <input id="notice" value="4주기 인증 준비" /></label>
+      </div>
+    </section>
+
+    <!-- 슬라이드 목록 -->
     <section class="panel">
       <div class="panel-title">
         <div>
-          <h2>&#49836;&#46972;&#51060;&#46300; &#47785;&#47197;</h2>
-          <p class="hint">&#54028;&#51068;&#47749; &#49692;&#49436;&#50752; &#54364; &#49692;&#49436;&#47484; &#47582;&#52628;&#47732; PC &#54868;&#47732;&#48372;&#54840;&#44592;&#50640;&#49436; &#44536;&#45824;&#47196; &#51116;&#49373;&#46121;&#45768;&#45796;.</p>
+          <h2>슬라이드 목록</h2>
+          <p class="hint">드래그(⋮⋮)로 순서를 변경하고 썸네일을 확인할 수 있습니다.</p>
         </div>
         <div class="actions">
-          <button id="add" type="button">&#49836;&#46972;&#51060;&#46300; &#52628;&#44032;</button>
-          <button id="bulkOpen" type="button" class="secondary">&#47553;&#53356; &#51068;&#44292;&#52628;&#44032;</button>
-          <button id="renumber" type="button" class="secondary">&#49692;&#49436; &#51116;&#51221;&#47148;</button>
-          <button id="clearDraft" type="button" class="secondary">&#52488;&#50504; &#52488;&#44592;&#54868;</button>
+          <button id="importOpen" type="button" class="secondary">📥 config.json 불러오기</button>
+          <button id="add" type="button">＋ 슬라이드 추가</button>
+          <button id="bulkOpen" type="button" class="secondary">🔗 링크 일괄추가</button>
+          <button id="renumber" type="button" class="secondary">순서 재정렬</button>
+          <button id="clearDraft" type="button" class="secondary">초안 초기화</button>
         </div>
       </div>
+
+      <!-- 일괄 추가 패널 -->
       <div id="bulkPanel" class="bulk-panel" hidden>
-        <label>&#44396;&#44544;&#46300;&#46972;&#51060;&#48652; &#54028;&#51068; &#47553;&#53356; &#50668;&#47084; &#44060; &#48537;&#50668;&#45347;&#44592;
+        <label>구글드라이브 파일 링크 여러 개 붙여넣기
           <textarea id="bulkLinks" spellcheck="false" placeholder="https://drive.google.com/file/d/.../view
 https://drive.google.com/file/d/.../view"></textarea>
         </label>
         <div class="actions">
-          <button id="bulkAdd" type="button">&#47785;&#47197;&#50640; &#52628;&#44032;</button>
+          <button id="bulkAdd" type="button">목록에 추가</button>
         </div>
-        <p class="hint">&#54260;&#45908; &#47553;&#53356;&#45716; &#51088;&#46041; &#48320;&#54872;&#46104;&#51648; &#50506;&#49845;&#45768;&#45796;. PNG &#44060;&#48324; &#54028;&#51068; &#47553;&#53356;&#47484; &#48537;&#50668;&#45347;&#50612; &#51452;&#49464;&#50836;.</p>
+        <p class="hint">폴더 링크는 자동 변환되지 않습니다. PNG 개별 파일 링크를 넣어서 추가해주세요.</p>
       </div>
+
+      <!-- 슬라이드 목록 테이블 -->
       <div class="table-wrap">
         <table id="slides">
           <thead>
             <tr>
-              <th>&#49692;&#49436;</th>
-              <th>&#51228;&#47785;</th>
-              <th>&#54028;&#51068;&#47749;</th>
-              <th>&#44396;&#44544;&#46300;&#46972;&#51060;&#48652; &#47553;&#53356;</th>
-              <th>&#44288;&#47532;</th>
+              <th class="col-drag">이동</th>
+              <th class="col-order">순서</th>
+              <th class="col-thumb">썸네일</th>
+              <th class="col-title">제목</th>
+              <th class="col-filename">파일명</th>
+              <th class="col-url">구글드라이브 링크</th>
+              <th class="col-actions">관리</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -68,25 +94,79 @@ https://drive.google.com/file/d/.../view"></textarea>
       </div>
     </section>
 
+    <!-- 미리보기 및 JSON 출력 -->
     <section class="panel split">
       <div>
-        <div class="panel-title"><h2>&#48120;&#47532;&#48372;&#44592;</h2></div>
+        <div class="panel-title">
+          <h2>슬라이드 순서 요약</h2>
+        </div>
         <ol id="preview" class="preview"></ol>
       </div>
       <div>
         <div class="panel-title">
           <h2>config.json</h2>
           <div class="actions">
-            <button id="make" type="button">&#49373;&#49457;</button>
-            <button id="copy" type="button" class="secondary">&#48373;&#49324;</button>
-            <button id="download" type="button" class="secondary">&#45796;&#50868;&#47196;&#46300;</button>
+            <button id="uploadDrive" type="button" class="primary-upload">☁️ 구글 드라이브에 config.json 업로드</button>
+            <button id="make" type="button" class="secondary">JSON 생성</button>
+            <button id="copy" type="button" class="secondary">복사</button>
+            <button id="download" type="button" class="secondary">다운로드</button>
           </div>
         </div>
-        <textarea id="output" spellcheck="false" placeholder="&#49373;&#49457; &#48260;&#53948;&#51012; &#45572;&#47476;&#47732; config.json &#45236;&#50857;&#51060; &#54364;&#49884;&#46121;&#45768;&#45796;."></textarea>
-        <p class="hint">&#49373;&#49457;&#46108; JSON&#51012; <code>config.json</code>&#51004;&#47196; &#51200;&#51109;&#54644; &#44396;&#44544;&#46300;&#46972;&#51060;&#48652;&#50640; &#47553;&#53356;&#44277;&#50976;&#47196; &#50629;&#47196;&#46300;&#54633;&#45768;&#45796;.</p>
+        <textarea id="output" spellcheck="false" placeholder="JSON 생성 또는 구글 드라이브 업로드 버튼을 누르면 config.json 내용이 표시됩니다."></textarea>
+        <p class="hint"><strong>[구글 드라이브에 config.json 업로드]</strong> 버튼을 누르면 구글 드라이브 파일이 자동으로 덮어써지며, <strong>[다운로드]</strong>로 수동 저장도 가능합니다.</p>
       </div>
     </section>
   </main>
+
+  <!-- config.json 불러오기 (Import) 모달 -->
+  <div id="importModal" class="modal-overlay" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📥 기존 config.json 불러오기</h3>
+        <button id="importClose" type="button" class="icon-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="import-methods">
+          <label class="file-drop-zone" id="dropZone">
+            <input type="file" id="configFileInput" accept=".json" hidden />
+            <span>📄 파일 선택 또는 JSON 파일을 이곳에 드래그하세요</span>
+          </label>
+          <p class="divider-text">또는 JSON 텍스트 직접 붙여넣기</p>
+          <textarea id="importTextarea" placeholder='{"version": "2026.07.27.001", "slides": [...]}'></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="importApply" type="button">불러오기 적용</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 실시간 화면보호기 시뮬레이터 (Simulator) 모달 -->
+  <div id="simulatorModal" class="modal-overlay full" hidden>
+    <div class="simulator-container">
+      <div class="simulator-header">
+        <span class="sim-title">📺 화면보호기 실시간 시뮬레이터</span>
+        <span id="simInfo" class="sim-info">1 / 3 슬라이드 (20초)</span>
+        <button id="simClose" type="button" class="sim-close-btn">닫기 ✕</button>
+      </div>
+      <div class="simulator-stage" id="simStage">
+        <div class="sim-slide-wrap">
+          <img id="simImg" src="" alt="슬라이드" />
+          <div id="simFallback" class="sim-fallback" hidden>
+            <span class="sim-fallback-title" id="simFallbackTitle"></span>
+            <span class="sim-fallback-sub" id="simFallbackSub">이미지를 로딩 중이거나 썸네일 미리보기를 지원하지 않습니다.</span>
+          </div>
+        </div>
+        <div class="sim-notice-bar" id="simNotice"></div>
+      </div>
+      <div class="simulator-controls">
+        <button id="simPrev" type="button" class="sim-btn">◀ 이전</button>
+        <button id="simToggle" type="button" class="sim-btn accent">⏸ 일시정지</button>
+        <button id="simNext" type="button" class="sim-btn">다음 ▶</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
