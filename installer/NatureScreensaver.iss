@@ -15,9 +15,11 @@ PrivilegesRequired=lowest
 UninstallDisplayName={#AppName}
 
 [Files]
-Source: "..\client\bin\Release\net8.0-windows\win-x64\publish\NatureScreensaver.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\client\bin\Release\net8.0-windows\win-x64\publish\NatureScreensaver.scr"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\client\bin\Release\net8.0-windows\win-x64\publish\NatureScreensaver.exe"; DestDir: "{app}"; Flags: ignoreversion; AfterInstall: CopyScrFile
 Source: "..\sample-content\settings.sample.json"; DestDir: "{localappdata}\NatureScreensaver"; DestName: "settings.json"; Flags: ignoreversion
+
+[InstallDelete]
+Type: files; Name: "{app}\NatureScreensaver.scr"
 
 [Registry]
 Root: HKCU; Subkey: "Control Panel\Desktop"; ValueType: string; ValueName: "SCRNSAVE.EXE"; ValueData: "{app}\NatureScreensaver.scr"
@@ -30,3 +32,9 @@ Name: "{group}\Uninstall Nature Screensaver"; Filename: "{uninstallexe}"
 
 [Run]
 Filename: "{app}\NatureScreensaver.exe"; Parameters: "/c"; Description: "Open settings notice"; Flags: postinstall skipifsilent nowait
+
+[Code]
+procedure CopyScrFile;
+begin
+  FileCopy(ExpandConstant('{app}\NatureScreensaver.exe'), ExpandConstant('{app}\NatureScreensaver.scr'), False);
+end;
