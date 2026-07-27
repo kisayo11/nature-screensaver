@@ -50,3 +50,7 @@ code { background: #f1eee8; padding: 1px 4px; }
   .grid.four, .split { grid-template-columns: 1fr; }
   .actions { justify-content: flex-start; }
 }
+
+.bulk-panel { background: #fbfaf7; border: 1px solid var(--border); padding: 12px; margin-bottom: 12px; }
+.bulk-panel textarea { min-height: 120px; }
+.warning-line { color: var(--danger); font-weight: 700; }

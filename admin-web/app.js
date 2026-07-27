@@ -17,7 +17,9 @@ const text = {
   up: "\uC704",
   down: "\uC544\uB798",
   normalize: "\uB9C1\uD06C\uBCC0\uD658",
-  remove: "\uC0AD\uC81C"
+  remove: "\uC0AD\uC81C",
+  folderLink: "\uD3F4\uB354 \uB9C1\uD06C",
+  folderWarning: "\uD3F4\uB354 \uB9C1\uD06C\uB294 PNG \uAC1C\uBCC4 \uB2E4\uC6B4\uB85C\uB4DC \uB9C1\uD06C\uB85C \uBCC0\uD658\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uAC01 PNG \uD30C\uC77C \uB9C1\uD06C\uB97C \uB123\uC5B4\uC8FC\uC138\uC694."
 };
 
 function esc(value) {
@@ -28,14 +30,27 @@ function setStatus(value) {
   statusBox.textContent = value;
 }
 
+function isDriveFolderUrl(value) {
+  return /drive\/folders\/[a-zA-Z0-9_-]+/.test(String(value || ""));
+}
+
 function driveDownloadUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
+  if (isDriveFolderUrl(raw)) return raw;
   const fileMatch = raw.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   const idParam = raw.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   const id = fileMatch?.[1] || idParam?.[1];
   if (id) return `https://drive.google.com/uc?export=download&id=${id}`;
   return raw;
+}
+
+function makeDefaultFileName(order) {
+  return `${String(order).padStart(2, "0")}_slide.png`;
+}
+
+function extractLinks(value) {
+  return String(value || "").split(/\s+/).map(v => v.trim()).filter(Boolean);
 }
 
 function addRow(row = {}) {
@@ -55,7 +70,15 @@ function addRow(row = {}) {
   tr.querySelector(".remove").addEventListener("click", () => { tr.remove(); renumber(); refresh(); });
   tr.querySelector(".up").addEventListener("click", () => { if (tr.previousElementSibling) tbody.insertBefore(tr, tr.previousElementSibling); renumber(); refresh(); });
   tr.querySelector(".down").addEventListener("click", () => { if (tr.nextElementSibling) tbody.insertBefore(tr.nextElementSibling, tr); renumber(); refresh(); });
-  tr.querySelector(".normalize").addEventListener("click", () => { const input = tr.querySelector(".url"); input.value = driveDownloadUrl(input.value); refresh(); });
+  tr.querySelector(".normalize").addEventListener("click", () => {
+    const input = tr.querySelector(".url");
+    if (isDriveFolderUrl(input.value)) {
+      alert(text.folderWarning);
+      return;
+    }
+    input.value = driveDownloadUrl(input.value);
+    refresh();
+  });
   tr.querySelectorAll("input").forEach(input => input.addEventListener("input", refresh));
   tbody.appendChild(tr);
   refresh();
@@ -98,7 +121,8 @@ function validate(config) {
     if (!slide.fileName.endsWith(".png")) errors.push(`${slide.fileName || "fileName"}: PNG \uD30C\uC77C\uBA85\uC774\uC5B4\uC57C \uD569\uB2C8\uB2E4.`);
     if (names.has(slide.fileName)) errors.push(`${slide.fileName}: \uD30C\uC77C\uBA85\uC774 \uC911\uBCF5\uB429\uB2C8\uB2E4.`);
     names.add(slide.fileName);
-    if (!slide.url.startsWith("https://")) errors.push(`${slide.fileName}: HTTPS \uB9C1\uD06C\uAC00 \uD544\uC694\uD569\uB2C8\uB2E4.`);
+    if (isDriveFolderUrl(slide.url)) errors.push(`${slide.fileName}: ${text.folderWarning}`);
+    else if (!slide.url.startsWith("https://")) errors.push(`${slide.fileName}: HTTPS \uB9C1\uD06C\uAC00 \uD544\uC694\uD569\uB2C8\uB2E4.`);
   }
   return [...new Set(errors)];
 }
@@ -158,6 +182,27 @@ function loadDraft() {
 }
 
 document.querySelector("#add").addEventListener("click", () => addRow());
+document.querySelector("#bulkOpen").addEventListener("click", () => {
+  const panel = document.querySelector("#bulkPanel");
+  panel.hidden = !panel.hidden;
+});
+document.querySelector("#bulkAdd").addEventListener("click", () => {
+  const links = extractLinks(document.querySelector("#bulkLinks").value);
+  const folderLinks = links.filter(isDriveFolderUrl);
+  if (folderLinks.length) alert(text.folderWarning);
+  links.filter(link => !isDriveFolderUrl(link)).forEach(link => {
+    const order = tbody.children.length + 1;
+    addRow({ order, title: "", fileName: makeDefaultFileName(order), url: driveDownloadUrl(link) });
+  });
+  document.querySelector("#bulkLinks").value = "";
+  renumber();
+  refresh();
+});
+document.querySelector("#clearDraft").addEventListener("click", () => {
+  if (!confirm("\uC800\uC7A5\uB41C \uCD08\uC548\uC744 \uC9C0\uC6B0\uACE0 \uAE30\uBCF8\uAC12\uC73C\uB85C \uB3CC\uC544\uAC08\uAE4C\uC694?")) return;
+  localStorage.removeItem(draftKey);
+  loadDraft();
+});
 document.querySelector("#renumber").addEventListener("click", () => { renumber(); refresh(); });
 document.querySelector("#make").addEventListener("click", generate);
 document.querySelector("#newVersion").addEventListener("click", () => { document.querySelector("#version").value = versionStamp(); refresh(); });
