@@ -14,3 +14,6 @@ Thumbs.db
 .idea/
 .vercel
 .env*
+
+# Local generated deployment config
+config.json
