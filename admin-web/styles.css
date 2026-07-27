@@ -1,0 +1,17 @@
+:root { font-family: Arial, sans-serif; color: #1f2937; background: #f6f4ef; }
+body { margin: 0; }
+main { max-width: 1180px; margin: 0 auto; padding: 28px; }
+h1 { margin: 0 0 20px; font-size: 28px; }
+h2 { margin: 0; font-size: 18px; }
+.panel { background: #fff; border: 1px solid #ddd6c8; padding: 18px; margin-bottom: 16px; }
+label { display: grid; gap: 6px; margin-bottom: 12px; font-size: 14px; font-weight: 700; }
+input, textarea { box-sizing: border-box; width: 100%; border: 1px solid #c8c0b2; padding: 9px 10px; font: inherit; background: #fff; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+button { border: 0; background: #334155; color: #fff; padding: 9px 14px; font-weight: 700; cursor: pointer; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid #d6d0c5; padding: 8px; font-size: 13px; vertical-align: top; }
+th { background: #eee9df; text-align: left; }
+td:nth-child(1) { width: 70px; }
+td:nth-child(5) { width: 64px; text-align: center; }
+textarea { min-height: 260px; font-family: Consolas, monospace; }
+.hint { color: #6b5e4f; font-size: 13px; margin-bottom: 0; }

@@ -1,0 +1,2 @@
+﻿Internal hospital utility project.
+Do not include patient information, personal information, or confidential accreditation documents in this repository.

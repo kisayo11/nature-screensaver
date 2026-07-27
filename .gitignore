@@ -1,0 +1,14 @@
+﻿# Build outputs
+client/bin/
+client/obj/
+installer/Output/
+
+# Local runtime cache/settings
+.cache/
+*.log
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

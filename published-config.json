@@ -1,0 +1,22 @@
+{
+  "version": "2026.07.27.001",
+  "updateIntervalMinutes": 60,
+  "slideDurationSeconds": 20,
+  "backgroundColor": "#050505",
+  "fitMode": "contain",
+  "notice": "Nature accreditation reminder",
+  "slides": [
+    {
+      "order": 1,
+      "title": "Patient rights",
+      "fileName": "01_patient_rights.png",
+      "url": "https://drive.google.com/uc?export=download&id=GOOGLE_DRIVE_FILE_ID"
+    },
+    {
+      "order": 2,
+      "title": "Patient identification",
+      "fileName": "02_patient_identification.png",
+      "url": "https://drive.google.com/uc?export=download&id=GOOGLE_DRIVE_FILE_ID"
+    }
+  ]
+}

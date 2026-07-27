@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nature Screensaver Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main>
+    <h1>Nature Screensaver Admin</h1>
+    <section class="panel">
+      <label>Version <input id="version" value="2026.07.27.001" /></label>
+      <label>Update interval minutes <input id="interval" type="number" value="60" min="5" /></label>
+      <label>Slide duration seconds <input id="duration" type="number" value="20" min="5" /></label>
+      <label>Notice <input id="notice" value="Nature accreditation reminder" /></label>
+    </section>
+    <section class="panel">
+      <div class="toolbar"><h2>Slides</h2><button id="add">Add</button></div>
+      <table id="slides"><thead><tr><th>Order</th><th>Title</th><th>File name</th><th>Google Drive download URL</th><th></th></tr></thead><tbody></tbody></table>
+    </section>
+    <section class="panel">
+      <button id="make">Generate config.json</button>
+      <textarea id="output" spellcheck="false"></textarea>
+      <p class="hint">Save generated JSON as config.json, upload it to Google Drive, and enable link sharing.</p>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
