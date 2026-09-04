@@ -62,10 +62,10 @@ const server = http.createServer((req, res) => {
         const repoRoot = path.join(__dirname, '..');
         const commitMsg = `Deploy screensaver version ${config.version || Date.now()}`;
 
-        // 루트 config.json은 gitignore 대상이므로 admin-web 경로만 안전하게 스테이징
+        // cmd.exe에서는 && 연산자가 모든 윈도우 버전에서 100% 정상 작동합니다.
         const gitCmd = `git add admin-web/slides admin-web/config.json && git commit -m "${commitMsg}" && git push origin main`;
 
-        exec(gitCmd, { cwd: repoRoot, shell: 'powershell.exe' }, (execErr, stdout, stderr) => {
+        exec(gitCmd, { cwd: repoRoot, shell: 'cmd.exe' }, (execErr, stdout, stderr) => {
           if (execErr) {
             console.error('Git Push Error:', stderr || execErr.message);
             res.writeHead(200, { 'Content-Type': 'application/json' });
