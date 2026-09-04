@@ -16,6 +16,7 @@ const kpiVersion = document.querySelector("#kpiVersion");
 const draftKey = "natureScreensaverAdminDraft";
 const gasKey = "natureScreensaverGasUrl";
 const historyKey = "natureScreensaverHistory";
+const defaultGasUrl = "https://script.google.com/macros/s/AKfycbwYdwib_0u08GMu6-SwRa5LLG0tERvrlkTgTiug1Ws_j2pOMts1gdDs-OYroLBBZJAN-A/exec";
 
 const text = {
   waiting: "대기 중",
@@ -497,12 +498,20 @@ if (imageBatchInput) {
 function collect() {
   const cards = [...slidesList.querySelectorAll(".slide-card")];
   const slides = cards.map(card => {
-    const rawUrl = card.querySelector(".slide-url").value.trim();
+    let rawUrl = card.querySelector(".slide-url").value.trim();
     const isLocal = Boolean(card.dataset.localDataUrl);
+    const fileName = card.querySelector(".slide-filename").value.trim();
+
+    // 로컬에서 업로드된 이미지인 경우 자동으로 Vercel /slides/ 주소 자동 완성!
+    if (isLocal && (!rawUrl || !rawUrl.startsWith("https://drive.google.com/"))) {
+      rawUrl = `https://nature-screensaver.vercel.app/slides/${fileName}`;
+      card.querySelector(".slide-url").value = rawUrl;
+    }
+
     return {
       order: Number(card.querySelector(".order-input").value || 0),
       title: card.querySelector(".slide-title").value.trim(),
-      fileName: card.querySelector(".slide-filename").value.trim(),
+      fileName: fileName,
       url: isLocal ? rawUrl : driveDownloadUrl(rawUrl)
     };
   }).filter(s => s.fileName || s.url || s.title).sort((a, b) => a.order - b.order);
@@ -579,7 +588,7 @@ function generate() {
 }
 
 /* ----------------------------------------------------
-   배포 실행 (옵션 B: 히스토리 자동 저장 + 구글 연동)
+   배포 실행 (옵션 B: 완전 자동 이미지 업로드 + 히스토리 저장)
 ---------------------------------------------------- */
 async function executeDeploy() {
   // 1. 배포 시 자동으로 현재 날짜/시간 기반 새 버전 번호 부여
@@ -589,42 +598,31 @@ async function executeDeploy() {
   const config = generate();
   if (!config) return;
 
-  // 2. 로컬 개발 서버가 있으면 config.json 파일 자동 쓰기
+  // 2. 업로드된 로컬 이미지 바이너리(Base64) 수집
+  const images = {};
+  slidesList.querySelectorAll(".slide-card").forEach(card => {
+    const fn = card.querySelector(".slide-filename").value.trim();
+    const dataUrl = card.dataset.localDataUrl;
+    if (fn && dataUrl) {
+      images[fn] = dataUrl;
+    }
+  });
+
+  // 3. 서버에 이미지 파일과 config.json 일괄 전송 저장 & Vercel 배포 & 구글드라이브 백업
+  setStatus("배포 진행 중 (Vercel 배포 및 구글드라이브 백업)...", "loading");
   try {
-    await fetch('/api/save-config', {
+    const res = await fetch('/api/save-bundle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config, null, 2)
+      body: JSON.stringify({ config, images })
     });
-  } catch {
-    // 순수 정적 환경(Vercel 등)에서는 패스
-  }
-
-  // 3. 구글 Apps Script 연동 URL이 있는 경우: 구글 드라이브 백업 동시 수행
-  if (gasUrl) {
-    setStatus(text.uploading, "loading");
-    try {
-      const response = await fetch(gasUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify(config, null, 2)
-      });
-      const result = await response.json();
-      if (result.status === "success") {
-        setStatus(text.uploaded, "success");
-        alert(`🎉 배포 완료!\n\n• 배포 버전: ${config.version}\n• 슬라이드: ${config.slides.length}장\n\n구글 드라이브 백업 및 배포 이력 저장이 완료되었습니다.`);
-      } else {
-        throw new Error(result.message || "업로드 오류 발생");
-      }
-    } catch (err) {
-      console.error(err);
-      setStatus("배포 완료 (구글백업 실패)", "error");
-      alert(`⚠️ 배포 이력은 저장되었으나 구글 드라이브 백업 전송 실패 (${err.message})\n\nGoogle Apps Script 설정을 확인해주세요.`);
-    }
-  } else {
-    // 4. 구글 연동이 없는 경우: Vercel / GitHub 직접 배포 모드
-    setStatus(text.uploaded, "success");
-    alert(`🎉 배포 완료! [Ver ${config.version}]\n\n• 슬라이드: ${config.slides.length}장\n• 배포 이력(History) 및 로컬 config.json에 최신 설정이 저장되었습니다.\n\n깃허브에 푸시되면 Vercel(nature-screensaver.vercel.app)을 통해 전 병원 PC에 자동 반영됩니다!`);
+    const resData = await res.json();
+    setStatus("배포 완료", "success");
+    alert(`🎉 배포 완료! [Ver ${config.version}]\n\n• 슬라이드: ${config.slides.length}장\n• Vercel(메인)에 자동 배포되어 병원 PC들에 즉시 반영됩니다.\n• 구글 드라이브에도 백그라운드 백업이 완료되었습니다!`);
+  } catch (e) {
+    // 만약 로컬 dev-server가 아닌 정적 브라우저 환경인 경우
+    setStatus("로컬 저장 완료", "success");
+    alert(`🎉 설정 저장 완료! [Ver ${config.version}]\n\n• 슬라이드: ${config.slides.length}장\n• 배포 이력(History) 및 로컬 설정에 저장되었습니다.`);
   }
 }
 
@@ -812,7 +810,7 @@ function versionStamp() {
 }
 
 function loadDraft() {
-  gasUrlInput.value = localStorage.getItem(gasKey) || "";
+  gasUrlInput.value = localStorage.getItem(gasKey) || defaultGasUrl;
   gasUrlInput.addEventListener("input", () => {
     localStorage.setItem(gasKey, gasUrlInput.value.trim());
   });

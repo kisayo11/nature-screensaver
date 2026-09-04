@@ -156,7 +156,11 @@ public sealed class ScreensaverForm : Form
 
     private void RefreshImageList()
     {
-        _images = Directory.GetFiles(_cacheDir, "*.png").OrderBy(Path.GetFileName).ToList();
+        var validExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg" };
+        _images = Directory.GetFiles(_cacheDir)
+            .Where(f => validExts.Contains(Path.GetExtension(f)))
+            .OrderBy(Path.GetFileName)
+            .ToList();
     }
 
     private void ApplyConfigToTimers()
@@ -183,7 +187,13 @@ public sealed class ScreensaverForm : Form
             await WriteJson(path, settings);
             return settings;
         }
-        return await ReadJson<LocalSettings>(path) ?? LocalSettings.Default();
+        var loaded = await ReadJson<LocalSettings>(path) ?? LocalSettings.Default();
+        if (string.IsNullOrWhiteSpace(loaded.ConfigUrl) || loaded.ConfigUrl.Contains("drive.google.com/uc?export=download&id=11piOInshLojKHr20k9AdROicAHiLQADf"))
+        {
+            loaded.ConfigUrl = "https://nature-screensaver.vercel.app/config.json";
+            await WriteJson(path, loaded);
+        }
+        return loaded;
     }
 
     private async Task DownloadSlides(HttpClient http, Config config)
