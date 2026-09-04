@@ -1,5 +1,5 @@
 {
-  "version": "2026.09.04.1045",
+  "version": "2026.09.04.1102",
   "updateIntervalMinutes": 60,
   "slideDurationSeconds": 20,
   "backgroundColor": "#050505",
@@ -8,9 +8,51 @@
   "slides": [
     {
       "order": 1,
-      "title": "IMG_1477",
-      "fileName": "IMG_1477.jpeg",
-      "url": "https://nature-screensaver.vercel.app/slides/IMG_1477.jpeg"
+      "title": "슬라이드1",
+      "fileName": "슬라이드1.PNG",
+      "url": "https://nature-screensaver.vercel.app/slides/슬라이드1.PNG"
+    },
+    {
+      "order": 2,
+      "title": "슬라이드2",
+      "fileName": "슬라이드2.PNG",
+      "url": "https://nature-screensaver.vercel.app/slides/슬라이드2.PNG"
+    },
+    {
+      "order": 3,
+      "title": "슬라이드3",
+      "fileName": "슬라이드3.PNG",
+      "url": "https://nature-screensaver.vercel.app/slides/슬라이드3.PNG"
+    },
+    {
+      "order": 4,
+      "title": "슬라이드4",
+      "fileName": "슬라이드4.PNG",
+      "url": "https://nature-screensaver.vercel.app/slides/슬라이드4.PNG"
+    },
+    {
+      "order": 5,
+      "title": "슬라이드5",
+      "fileName": "슬라이드5.PNG",
+      "url": "https://nature-screensaver.vercel.app/slides/슬라이드5.PNG"
+    },
+    {
+      "order": 6,
+      "title": "슬라이드6",
+      "fileName": "슬라이드6.PNG",
+      "url": "https://nature-screensaver.vercel.app/slides/슬라이드6.PNG"
+    },
+    {
+      "order": 7,
+      "title": "슬라이드7",
+      "fileName": "슬라이드7.PNG",
+      "url": "https://nature-screensaver.vercel.app/slides/슬라이드7.PNG"
+    },
+    {
+      "order": 8,
+      "title": "슬라이드8",
+      "fileName": "슬라이드8.PNG",
+      "url": "https://nature-screensaver.vercel.app/slides/슬라이드8.PNG"
     }
   ]
 }
