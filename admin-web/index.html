@@ -10,6 +10,29 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- 보안 락 스크린 (비밀번호 인증) -->
+  <div id="authLockScreen" class="lock-screen-overlay">
+    <div class="lock-card">
+      <div class="lock-icon-wrap">
+        <span class="lock-avatar">🌿</span>
+        <span class="lock-badge">🔒</span>
+      </div>
+      <h2 class="lock-title">네이처 관리자 인증</h2>
+      <p class="lock-desc">화면보호기 설정 및 슬라이드 관리를 위해 비밀번호를 입력해주세요.</p>
+      
+      <form id="authForm" class="lock-form" onsubmit="return false;">
+        <div class="lock-input-wrap">
+          <input type="password" id="authPasswordInput" placeholder="비밀번호 입력" autofocus autocomplete="current-password" />
+          <button type="submit" id="authSubmitBtn" class="btn btn-primary">확인</button>
+        </div>
+        <div id="authErrorMsg" class="lock-error" hidden>비밀번호가 올바르지 않습니다.</div>
+        <div class="lock-hint">
+          <span>💡 초기 기본 비밀번호: <strong>nature1234</strong></span>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- 상단 네비게이션 헤더 -->
   <header class="app-header">
     <div class="header-container">
@@ -26,6 +49,14 @@
       </div>
       
       <div class="header-actions">
+        <button id="lockAppBtn" type="button" class="btn btn-secondary" title="화면 잠금">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          잠금
+        </button>
+        <button id="changePwdOpen" type="button" class="btn btn-secondary" title="비밀번호 변경">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+          암호변경
+        </button>
         <button id="historyOpen" type="button" class="btn btn-secondary">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           배포 이력
@@ -77,8 +108,8 @@
         <div class="card-header-left">
           <div class="section-icon">⚙️</div>
           <div>
-            <h2 class="card-title">배포 및 구글 연동 설정</h2>
-            <p class="card-subtitle">버전 번호, 재생 주기, 공지사항 문구 및 자동 업로드 URL을 관리합니다.</p>
+            <h2 class="card-title">배포 및 화면보호기 기본 설정</h2>
+            <p class="card-subtitle">버전 번호, 재생 주기, 슬라이드 시간 및 공지사항을 설정합니다. (구글 드라이브 백업은 하단)</p>
           </div>
         </div>
         <button type="button" class="icon-toggle" aria-label="설정 펼치기/접기">
@@ -87,19 +118,6 @@
       </div>
 
       <div class="card-body" id="settingsContent">
-        <!-- 구글 드라이브 백업 연동 배너 (선택사항) -->
-        <div class="integration-banner">
-          <div class="banner-info">
-            <span class="badge-tag">선택사항 (백업용)</span>
-            <strong>구글 드라이브 자동 백업 연동</strong>
-            <p>신규 인스톨러는 Vercel을 직접 바라보므로 필수가 아닙니다. 구글 드라이브에도 백업본을 남기고 싶으실 때만 연동 URL을 입력하시면 됩니다.</p>
-          </div>
-          <div class="banner-controls">
-            <input id="gasUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec (선택사항)" spellcheck="false" />
-            <button id="openGasGuide" type="button" class="btn btn-outline btn-sm">📖 1분 세팅 가이드</button>
-          </div>
-        </div>
-
         <!-- 4열 기본 설정 입력 그리드 -->
         <div class="settings-grid">
           <div class="input-group">
@@ -111,18 +129,55 @@
           </div>
 
           <div class="input-group">
-            <label for="interval">PC 업데이트 주기 (분)</label>
-            <input id="interval" type="number" value="60" min="5" step="5" />
+            <div class="label-with-action">
+              <label for="interval">PC 업데이트 주기</label>
+              <span class="label-subtext">최소 1분</span>
+            </div>
+            <div class="input-with-presets">
+              <input id="interval" type="number" value="60" min="1" step="1" />
+              <div class="preset-chips" id="intervalPresets">
+                <button type="button" class="preset-chip" data-val="1">1분 (초고속)</button>
+                <button type="button" class="preset-chip" data-val="5">5분</button>
+                <button type="button" class="preset-chip" data-val="10">10분</button>
+                <button type="button" class="preset-chip" data-val="30">30분</button>
+                <button type="button" class="preset-chip active" data-val="60">60분</button>
+              </div>
+            </div>
           </div>
 
           <div class="input-group">
-            <label for="duration">슬라이드 표시 시간 (초)</label>
-            <input id="duration" type="number" value="20" min="5" step="1" />
+            <div class="label-with-action">
+              <label for="duration">슬라이드 표시 시간</label>
+              <span class="label-subtext">최소 3초</span>
+            </div>
+            <div class="input-with-presets">
+              <input id="duration" type="number" value="20" min="3" step="1" />
+              <div class="preset-chips" id="durationPresets">
+                <button type="button" class="preset-chip" data-val="5">5초</button>
+                <button type="button" class="preset-chip" data-val="10">10초</button>
+                <button type="button" class="preset-chip" data-val="15">15초</button>
+                <button type="button" class="preset-chip active" data-val="20">20초</button>
+                <button type="button" class="preset-chip" data-val="30">30초</button>
+              </div>
+            </div>
           </div>
 
           <div class="input-group">
             <label for="notice">하단 공지사항 배너 문구</label>
             <input id="notice" value="4주기 의료기관 인증평가 준비" placeholder="화면 하단에 흐를 공지 문구" />
+          </div>
+        </div>
+
+        <!-- 구글 드라이브 백업 연동 배너 (하단 배치, 선택사항) -->
+        <div class="integration-banner">
+          <div class="banner-info">
+            <span class="badge-tag">선택사항 (백업용)</span>
+            <strong>구글 드라이브 자동 백업 연동</strong>
+            <p>신규 인스톨러는 Vercel을 직접 바라보므로 필수가 아닙니다. 구글 드라이브에도 백업본을 남기고 싶으실 때만 연동 URL을 입력하시면 됩니다.</p>
+          </div>
+          <div class="banner-controls">
+            <input id="gasUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec (선택사항)" spellcheck="false" />
+            <button id="openGasGuide" type="button" class="btn btn-outline btn-sm">📖 1분 세팅 가이드</button>
           </div>
         </div>
       </div>
@@ -397,6 +452,40 @@
       <div class="modal-footer">
         <button id="historyClear" type="button" class="btn btn-ghost text-danger">이력 전체 삭제</button>
         <button id="historyOk" type="button" class="btn btn-secondary">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 비밀번호 변경 모달 -->
+  <div id="passwordModal" class="modal-overlay" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">🔑</span>
+          <h3>관리자 비밀번호 변경</h3>
+        </div>
+        <button id="pwdClose" type="button" class="icon-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="pwdChangeForm" onsubmit="return false;" class="pwd-change-form">
+          <div class="input-group">
+            <label for="currentPwd">현재 비밀번호</label>
+            <input type="password" id="currentPwd" placeholder="현재 비밀번호" autocomplete="current-password" />
+          </div>
+          <div class="input-group">
+            <label for="newPwd">새 비밀번호</label>
+            <input type="password" id="newPwd" placeholder="새 비밀번호 (4자리 이상 권장)" autocomplete="new-password" />
+          </div>
+          <div class="input-group">
+            <label for="confirmPwd">새 비밀번호 확인</label>
+            <input type="password" id="confirmPwd" placeholder="새 비밀번호 다시 입력" autocomplete="new-password" />
+          </div>
+          <div id="pwdChangeError" class="lock-error" hidden></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="pwdCancel" type="button" class="btn btn-secondary">취소</button>
+        <button id="pwdSave" type="button" class="btn btn-primary">비밀번호 저장</button>
       </div>
     </div>
   </div>

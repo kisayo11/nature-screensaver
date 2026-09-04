@@ -236,8 +236,8 @@ public sealed class ScreensaverForm : Form
     private void ApplyConfigToTimers()
     {
         _notice.Text = string.IsNullOrWhiteSpace(_config.Notice) ? "Nature Screensaver" : _config.Notice;
-        _slideTimer.Interval = Math.Max(5, _config.SlideDurationSeconds) * 1000;
-        _syncTimer.Interval = Math.Max(5, _config.UpdateIntervalMinutes) * 60 * 1000;
+        _slideTimer.Interval = Math.Max(3, _config.SlideDurationSeconds) * 1000;
+        _syncTimer.Interval = Math.Max(1, _config.UpdateIntervalMinutes) * 60 * 1000;
     }
 
     private void AttachPreviewWindow()

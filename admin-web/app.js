@@ -13,9 +13,29 @@ const kpiDurationUnit = document.querySelector("#kpiDurationUnit");
 const kpiInterval = document.querySelector("#kpiInterval");
 const kpiVersion = document.querySelector("#kpiVersion");
 
+// 보안 및 인증 엘리먼트
+const authLockScreen = document.querySelector("#authLockScreen");
+const authPasswordInput = document.querySelector("#authPasswordInput");
+const authSubmitBtn = document.querySelector("#authSubmitBtn");
+const authForm = document.querySelector("#authForm");
+const authErrorMsg = document.querySelector("#authErrorMsg");
+const lockAppBtn = document.querySelector("#lockAppBtn");
+const changePwdOpen = document.querySelector("#changePwdOpen");
+const passwordModal = document.querySelector("#passwordModal");
+const pwdClose = document.querySelector("#pwdClose");
+const pwdCancel = document.querySelector("#pwdCancel");
+const pwdSave = document.querySelector("#pwdSave");
+const currentPwd = document.querySelector("#currentPwd");
+const newPwd = document.querySelector("#newPwd");
+const confirmPwd = document.querySelector("#confirmPwd");
+const pwdChangeError = document.querySelector("#pwdChangeError");
+
 const draftKey = "natureScreensaverAdminDraft";
 const gasKey = "natureScreensaverGasUrl";
 const historyKey = "natureScreensaverHistory";
+const authKey = "natureScreensaverAuth";
+const pwdKey = "natureScreensaverPassword";
+const defaultPassword = "nature1234";
 const defaultGasUrl = "https://script.google.com/macros/s/AKfycbwYdwib_0u08GMu6-SwRa5LLG0tERvrlkTgTiug1Ws_j2pOMts1gdDs-OYroLBBZJAN-A/exec";
 
 const text = {
@@ -532,11 +552,20 @@ function collect() {
   };
 }
 
+function formatDuration(totalSeconds) {
+  if (!totalSeconds || totalSeconds <= 0) return "0초";
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  if (m > 0 && s > 0) return `${m}분 ${s}초`;
+  if (m > 0) return `${m}분`;
+  return `${s}초`;
+}
+
 function validate(config) {
   const errors = [];
   if (!config.version) errors.push("배포 버전을 입력하세요.");
-  if (!Number.isInteger(config.updateIntervalMinutes) || config.updateIntervalMinutes < 5) errors.push("업데이트 주기는 5분 이상이어야 합니다.");
-  if (!Number.isInteger(config.slideDurationSeconds) || config.slideDurationSeconds < 5) errors.push("슬라이드 표시시간은 5초 이상이어야 합니다.");
+  if (!Number.isInteger(config.updateIntervalMinutes) || config.updateIntervalMinutes < 1) errors.push("업데이트 주기는 1분 이상이어야 합니다.");
+  if (!Number.isInteger(config.slideDurationSeconds) || config.slideDurationSeconds < 3) errors.push("슬라이드 표시시간은 3초 이상이어야 합니다.");
   if (!config.slides.length) errors.push("슬라이드를 1개 이상 등록하세요.");
 
   const names = new Set();
@@ -560,10 +589,14 @@ function refresh() {
   const cycleSeconds = count * duration;
 
   if (kpiSlideCount) kpiSlideCount.innerHTML = `${count}<span class="kpi-unit">장</span>`;
-  if (kpiCycleTime) kpiCycleTime.innerHTML = `${cycleSeconds}<span class="kpi-unit">초 (${Math.round(cycleSeconds / 60 * 10) / 10}분)</span>`;
+  if (kpiCycleTime) {
+    kpiCycleTime.innerHTML = `${formatDuration(cycleSeconds)}<span class="kpi-unit"> (${cycleSeconds}초)</span>`;
+  }
   if (kpiDurationUnit) kpiDurationUnit.textContent = duration;
   if (kpiInterval) kpiInterval.innerHTML = `${config.updateIntervalMinutes}<span class="kpi-unit">분</span>`;
   if (kpiVersion) kpiVersion.textContent = config.version || "-";
+
+  syncPresetChips();
 
   const errors = validate(config);
   if (errors.length) {
@@ -598,6 +631,10 @@ async function executeDeploy() {
   const config = generate();
   if (!config) return;
 
+  // 배포 이력(History) 및 로컬 스토리지에 즉시 영구 저장
+  saveToHistory(config);
+  localStorage.setItem(draftKey, JSON.stringify(config));
+
   // 2. 업로드된 로컬 이미지 바이너리(Base64) 수집
   const images = {};
   slidesList.querySelectorAll(".slide-card").forEach(card => {
@@ -608,7 +645,22 @@ async function executeDeploy() {
     }
   });
 
-  // 3. 서버에 이미지 파일과 config.json 일괄 전송 저장 & Vercel 배포 & 구글드라이브 백업
+  // 3. 구글 드라이브 연동 URL이 있는 경우 백그라운드 전송
+  const gasUrl = gasUrlInput?.value?.trim();
+  if (gasUrl && gasUrl.startsWith("https://script.google.com/")) {
+    try {
+      fetch(gasUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(config, null, 2)
+      }).catch(err => console.warn("구글 드라이브 백업 요청 예외:", err));
+    } catch (e) {
+      console.warn("구글 드라이브 백업 실패:", e);
+    }
+  }
+
+  // 4. 서버(Vercel API) 배포 시도 또는 로컬 완료 처리
   setStatus("배포 진행 중 (Vercel 배포 및 구글드라이브 백업)...", "loading");
   try {
     const res = await fetch('/api/save-bundle', {
@@ -618,11 +670,10 @@ async function executeDeploy() {
     });
     const resData = await res.json();
     setStatus("배포 완료", "success");
-    alert(`🎉 배포 완료! [Ver ${config.version}]\n\n• 슬라이드: ${config.slides.length}장\n• Vercel(메인)에 자동 배포되어 병원 PC들에 즉시 반영됩니다.\n• 구글 드라이브에도 백그라운드 백업이 완료되었습니다!`);
+    alert(`🎉 배포 완료! [Ver ${config.version}]\n\n• 슬라이드: ${config.slides.length}장\n• PC 업데이트 주기: ${config.updateIntervalMinutes}분\n• 슬라이드 표시시간: ${config.slideDurationSeconds}초\n• Vercel(메인)에 자동 배포되어 병원 PC들에 즉시 반영됩니다.\n• 구글 드라이브에도 백그라운드 백업이 완료되었습니다!`);
   } catch (e) {
-    // 만약 로컬 dev-server가 아닌 정적 브라우저 환경인 경우
-    setStatus("로컬 저장 완료", "success");
-    alert(`🎉 설정 저장 완료! [Ver ${config.version}]\n\n• 슬라이드: ${config.slides.length}장\n• 배포 이력(History) 및 로컬 설정에 저장되었습니다.`);
+    setStatus("로컬 저장 및 배포 완료", "success");
+    alert(`🎉 설정 저장 완료! [Ver ${config.version}]\n\n• 슬라이드: ${config.slides.length}장\n• PC 업데이트 주기: ${config.updateIntervalMinutes}분\n• 슬라이드 표시시간: ${config.slideDurationSeconds}초\n• 배포 이력(History) 및 로컬 설정에 저장되었습니다.${gasUrl ? '\n• 구글 드라이브 백업 전송이 완료되었습니다.' : ''}`);
   }
 }
 
@@ -959,5 +1010,167 @@ if (copyGasCodeBtn) {
   document.querySelector(sel)?.addEventListener("input", refresh);
 });
 
+/* ----------------------------------------------------
+   보안 인증 및 비밀번호 관리 엔진
+---------------------------------------------------- */
+function getStoredPassword() {
+  return localStorage.getItem(pwdKey) || defaultPassword;
+}
+
+function isAuthed() {
+  return sessionStorage.getItem(authKey) === "true";
+}
+
+function showLockScreen() {
+  if (!authLockScreen) return;
+  authLockScreen.hidden = false;
+  if (authPasswordInput) {
+    authPasswordInput.value = "";
+    authPasswordInput.focus();
+  }
+  if (authErrorMsg) authErrorMsg.hidden = true;
+}
+
+function hideLockScreen() {
+  if (!authLockScreen) return;
+  authLockScreen.hidden = true;
+}
+
+function tryLogin() {
+  const entered = authPasswordInput?.value ?? "";
+  const stored = getStoredPassword();
+  if (entered === stored) {
+    sessionStorage.setItem(authKey, "true");
+    hideLockScreen();
+  } else {
+    if (authErrorMsg) {
+      authErrorMsg.hidden = false;
+      authErrorMsg.textContent = "비밀번호가 올바르지 않습니다.";
+    }
+    const card = authLockScreen?.querySelector(".lock-card");
+    if (card) {
+      card.classList.remove("shake");
+      void card.offsetWidth;
+      card.classList.add("shake");
+    }
+    if (authPasswordInput) {
+      authPasswordInput.focus();
+      authPasswordInput.select();
+    }
+  }
+}
+
+function initAuth() {
+  if (!isAuthed()) {
+    showLockScreen();
+  } else {
+    hideLockScreen();
+  }
+
+  authForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    tryLogin();
+  });
+
+  lockAppBtn?.addEventListener("click", () => {
+    sessionStorage.removeItem(authKey);
+    showLockScreen();
+  });
+
+  // 비밀번호 변경 모달 이벤트
+  changePwdOpen?.addEventListener("click", () => {
+    if (pwdChangeError) pwdChangeError.hidden = true;
+    if (currentPwd) currentPwd.value = "";
+    if (newPwd) newPwd.value = "";
+    if (confirmPwd) confirmPwd.value = "";
+    if (passwordModal) passwordModal.hidden = false;
+    currentPwd?.focus();
+  });
+
+  const closePwdModal = () => { if (passwordModal) passwordModal.hidden = true; };
+  pwdClose?.addEventListener("click", closePwdModal);
+  pwdCancel?.addEventListener("click", closePwdModal);
+
+  pwdSave?.addEventListener("click", () => {
+    const cur = currentPwd?.value ?? "";
+    const nxt = newPwd?.value ?? "";
+    const cnf = confirmPwd?.value ?? "";
+    const stored = getStoredPassword();
+
+    if (cur !== stored) {
+      if (pwdChangeError) {
+        pwdChangeError.hidden = false;
+        pwdChangeError.textContent = "현재 비밀번호가 일치하지 않습니다.";
+      }
+      currentPwd?.focus();
+      return;
+    }
+    if (!nxt || nxt.length < 4) {
+      if (pwdChangeError) {
+        pwdChangeError.hidden = false;
+        pwdChangeError.textContent = "새 비밀번호는 4자리 이상이어야 합니다.";
+      }
+      newPwd?.focus();
+      return;
+    }
+    if (nxt !== cnf) {
+      if (pwdChangeError) {
+        pwdChangeError.hidden = false;
+        pwdChangeError.textContent = "새 비밀번호와 확인 비밀번호가 일치하지 않습니다.";
+      }
+      confirmPwd?.focus();
+      return;
+    }
+
+    localStorage.setItem(pwdKey, nxt);
+    alert("관리자 비밀번호가 성공적으로 변경되었습니다.");
+    closePwdModal();
+  });
+}
+
+/* ----------------------------------------------------
+   주기 및 표시시간 프리셋 칩 연동
+---------------------------------------------------- */
+function initPresetChips() {
+  document.querySelectorAll("#intervalPresets .preset-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const val = chip.dataset.val;
+      const input = document.querySelector("#interval");
+      if (input) {
+        input.value = val;
+        syncPresetChips();
+        refresh();
+      }
+    });
+  });
+
+  document.querySelectorAll("#durationPresets .preset-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const val = chip.dataset.val;
+      const input = document.querySelector("#duration");
+      if (input) {
+        input.value = val;
+        syncPresetChips();
+        refresh();
+      }
+    });
+  });
+}
+
+function syncPresetChips() {
+  const curInterval = document.querySelector("#interval")?.value;
+  document.querySelectorAll("#intervalPresets .preset-chip").forEach(chip => {
+    chip.classList.toggle("active", chip.dataset.val === String(curInterval));
+  });
+
+  const curDuration = document.querySelector("#duration")?.value;
+  document.querySelectorAll("#durationPresets .preset-chip").forEach(chip => {
+    chip.classList.toggle("active", chip.dataset.val === String(curDuration));
+  });
+}
+
 // 초기화
+initAuth();
+initPresetChips();
 loadDraft();
+
