@@ -146,7 +146,11 @@ public sealed class ScreensaverForm : Form
             {
                 using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
                 http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-                var remote = await http.GetFromJsonAsync<Config>(settings.ConfigUrl);
+                http.DefaultRequestHeaders.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true, NoStore = true, MustRevalidate = true };
+                var cacheBustUrl = settings.ConfigUrl.Contains('?') 
+                    ? $"{settings.ConfigUrl}&_cb={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}" 
+                    : $"{settings.ConfigUrl}?_cb={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+                var remote = await http.GetFromJsonAsync<Config>(cacheBustUrl);
                 await File.AppendAllTextAsync(logPath, $"[{DateTime.Now}] Remote fetched. Version: {remote?.Version}, Slides: {remote?.Slides?.Count}\n");
                 if (remote?.Slides?.Count > 0 && ShouldDownload(remote))
                 {
