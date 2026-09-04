@@ -12,11 +12,23 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        var baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NatureScreensaver");
+        Directory.CreateDirectory(baseDir);
+        try { File.AppendAllText(Path.Combine(baseDir, "sync.log"), $"[{DateTime.Now}] Main started. Mode: {(args.Length > 0 ? args[0] : "none")} (Args: {string.Join(" ", args)})\n"); } catch {}
+
         ApplicationConfiguration.Initialize();
         var mode = args.Length > 0 ? args[0].ToLowerInvariant() : "/s";
         if (mode.StartsWith("/c"))
         {
-            MessageBox.Show("Nature Screensaver settings are controlled by config.json.", "Nature Screensaver");
+            var settingsPath = Path.Combine(baseDir, "settings.json");
+            var lastConfigPath = Path.Combine(baseDir, "last-config.json");
+            var logPath = Path.Combine(baseDir, "sync.log");
+            var settingsText = File.Exists(settingsPath) ? File.ReadAllText(settingsPath) : "없음";
+            var lastConfigText = File.Exists(lastConfigPath) ? File.ReadAllText(lastConfigPath) : "없음";
+            var logText = File.Exists(logPath) ? File.ReadAllText(logPath) : "로그 없음";
+            if (logText.Length > 300) logText = logText.Substring(logText.Length - 300);
+
+            MessageBox.Show($"[네이처 화면보호기 상태]\n\n● 설정 파일 (settings.json):\n{settingsText}\n\n● 최근 로그:\n{logText}", "네이처 화면보호기 정보");
             return;
         }
         if (mode.StartsWith("/p"))
@@ -88,10 +100,18 @@ public sealed class ScreensaverForm : Form
         Controls.Add(_picture);
         Controls.Add(_notice);
 
-        // 어느 모니터에서든 사용자 입력(키보드/마우스) 발생 시 모든 화면보호기 창 일괄 종료
-        KeyDown += (_, _) => Application.Exit();
-        MouseDown += (_, _) => Application.Exit();
-        MouseMove += (_, e) => { if (_startMouse != Point.Empty && Distance(_startMouse, e.Location) > 8) Application.Exit(); };
+        var startTime = DateTime.UtcNow;
+        if (_previewParent == IntPtr.Zero)
+        {
+            KeyDown += (_, _) => { if ((DateTime.UtcNow - startTime).TotalMilliseconds > 1000) Application.Exit(); };
+            MouseDown += (_, _) => { if ((DateTime.UtcNow - startTime).TotalMilliseconds > 1000) Application.Exit(); };
+            MouseMove += (_, e) => {
+                if ((DateTime.UtcNow - startTime).TotalMilliseconds > 1500 && _startMouse != Point.Empty && Distance(_startMouse, e.Location) > 20)
+                {
+                    Application.Exit();
+                }
+            };
+        }
         Load += (_, _) => AttachPreviewWindow();
         Shown += async (_, _) => { _startMouse = PointToClient(Cursor.Position); await SyncAndStart(); };
         _slideTimer.Tick += (_, _) => ShowNext();
@@ -117,26 +137,38 @@ public sealed class ScreensaverForm : Form
         // 다운로드는 주 모니터 폼에서만 수행하여 파일 동시쓰기 충돌 방지
         if (!_isPrimary) return;
 
+        var logPath = Path.Combine(_baseDir, "sync.log");
         try
         {
             var settings = await LoadLocalSettings();
+            await File.AppendAllTextAsync(logPath, $"[{DateTime.Now}] Sync started. ConfigUrl: {settings.ConfigUrl}\n");
             if (!string.IsNullOrWhiteSpace(settings.ConfigUrl))
             {
                 using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+                http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
                 var remote = await http.GetFromJsonAsync<Config>(settings.ConfigUrl);
+                await File.AppendAllTextAsync(logPath, $"[{DateTime.Now}] Remote fetched. Version: {remote?.Version}, Slides: {remote?.Slides?.Count}\n");
                 if (remote?.Slides?.Count > 0 && ShouldDownload(remote))
                 {
+                    await File.AppendAllTextAsync(logPath, $"[{DateTime.Now}] Starting DownloadSlides...\n");
                     await DownloadSlides(http, remote);
                     _config = remote;
                     await WriteJson(Path.Combine(_baseDir, "last-config.json"), remote);
                     RefreshImageList();
                     ApplyConfigToTimers();
-                    if (_picture.Image == null) ShowNext();
+                    await File.AppendAllTextAsync(logPath, $"[{DateTime.Now}] DownloadSlides finished. Images count: {_images.Count}\n");
+                    _index = -1;
+                    ShowNext();
+                }
+                else
+                {
+                    await File.AppendAllTextAsync(logPath, $"[{DateTime.Now}] ShouldDownload returned false or no slides.\n");
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
+            await File.AppendAllTextAsync(logPath, $"[{DateTime.Now}] SYNC ERROR: {ex}\n");
             RefreshImageList();
             if (_picture.Image == null) ShowNext();
         }
@@ -208,9 +240,15 @@ public sealed class ScreensaverForm : Form
             var safeName = string.Concat(slide.FileName.Split(Path.GetInvalidFileNameChars()));
             await File.WriteAllBytesAsync(Path.Combine(temp, safeName), bytes);
         }
-        foreach (var file in Directory.GetFiles(_cacheDir)) File.Delete(file);
-        foreach (var file in Directory.GetFiles(temp)) File.Move(file, Path.Combine(_cacheDir, Path.GetFileName(file)), true);
-        Directory.Delete(temp, true);
+        foreach (var file in Directory.GetFiles(_cacheDir))
+        {
+            try { File.Delete(file); } catch {}
+        }
+        foreach (var file in Directory.GetFiles(temp))
+        {
+            try { File.Move(file, Path.Combine(_cacheDir, Path.GetFileName(file)), true); } catch {}
+        }
+        try { Directory.Delete(temp, true); } catch {}
     }
 
     private void ShowNext()
