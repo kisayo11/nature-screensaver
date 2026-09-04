@@ -1,5 +1,5 @@
 {
-  "version": "2026.09.04.1035",
+  "version": "2026.09.04.1036",
   "updateIntervalMinutes": 60,
   "slideDurationSeconds": 20,
   "backgroundColor": "#050505",
@@ -8,15 +8,15 @@
   "slides": [
     {
       "order": 1,
-      "title": "슬라이드1",
-      "fileName": "슬라이드1.PNG",
-      "url": "https://nature-screensaver.vercel.app/slides/슬라이드1.PNG"
-    },
-    {
-      "order": 2,
       "title": "IMG_1477",
       "fileName": "IMG_1477.jpeg",
       "url": "https://nature-screensaver.vercel.app/slides/IMG_1477.jpeg"
+    },
+    {
+      "order": 2,
+      "title": "슬라이드1",
+      "fileName": "슬라이드1.PNG",
+      "url": "https://nature-screensaver.vercel.app/slides/슬라이드1.PNG"
     },
     {
       "order": 3,
