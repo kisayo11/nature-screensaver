@@ -112,8 +112,20 @@ public sealed class ScreensaverForm : Form
                 }
             };
         }
-        Load += (_, _) => AttachPreviewWindow();
-        Shown += async (_, _) => { _startMouse = PointToClient(Cursor.Position); await SyncAndStart(); };
+        Load += async (_, _) => {
+            AttachPreviewWindow();
+            if (_previewParent != IntPtr.Zero)
+            {
+                await SyncAndStart();
+            }
+        };
+        Shown += async (_, _) => {
+            _startMouse = PointToClient(Cursor.Position);
+            if (_previewParent == IntPtr.Zero)
+            {
+                await SyncAndStart();
+            }
+        };
         _slideTimer.Tick += (_, _) => ShowNext();
         if (_isPrimary)
         {
@@ -193,6 +205,28 @@ public sealed class ScreensaverForm : Form
     private void RefreshImageList()
     {
         var validExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg" };
+
+        // config.json에 정의된 Order 순서대로 정확하게 매핑
+        if (_config?.Slides?.Count > 0)
+        {
+            var orderedList = new List<string>();
+            foreach (var slide in _config.Slides.OrderBy(s => s.Order))
+            {
+                if (string.IsNullOrWhiteSpace(slide.FileName)) continue;
+                var filePath = Path.Combine(_cacheDir, slide.FileName);
+                if (File.Exists(filePath))
+                {
+                    orderedList.Add(filePath);
+                }
+            }
+            if (orderedList.Count > 0)
+            {
+                _images = orderedList;
+                return;
+            }
+        }
+
+        // config 매핑이 없을 경우 폴더 내 파일 정렬
         _images = Directory.GetFiles(_cacheDir)
             .Where(f => validExts.Contains(Path.GetExtension(f)))
             .OrderBy(Path.GetFileName)
