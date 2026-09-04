@@ -22,10 +22,26 @@ internal static class Program
         if (mode.StartsWith("/p"))
         {
             var parent = args.Length > 1 && long.TryParse(args[1], out var handle) ? new IntPtr(handle) : IntPtr.Zero;
-            Application.Run(new ScreensaverForm(parent));
+            Application.Run(new ScreensaverForm(Screen.PrimaryScreen, true, parent));
             return;
         }
-        Application.Run(new ScreensaverForm());
+
+        // 듀얼/다중 모니터 감지: 연결된 모든 화면에 개별 화면보호기 창 생성
+        var screens = Screen.AllScreens;
+        if (screens.Length == 0)
+        {
+            Application.Run(new ScreensaverForm(Screen.PrimaryScreen, true));
+            return;
+        }
+
+        foreach (var screen in screens)
+        {
+            var isPrimary = screen.Primary;
+            var form = new ScreensaverForm(screen, isPrimary);
+            form.Show();
+        }
+
+        Application.Run();
     }
 }
 
@@ -38,31 +54,51 @@ public sealed class ScreensaverForm : Form
     private readonly string _baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NatureScreensaver");
     private readonly string _cacheDir;
     private readonly IntPtr _previewParent;
+    private readonly Screen _screen;
+    private readonly bool _isPrimary;
     private Config _config = Config.Default();
     private List<string> _images = [];
     private int _index = -1;
     private Point _startMouse;
 
-    public ScreensaverForm(IntPtr previewParent = default)
+    public ScreensaverForm(Screen? screen = null, bool isPrimary = true, IntPtr previewParent = default)
     {
+        _screen = screen ?? Screen.PrimaryScreen ?? Screen.AllScreens.FirstOrDefault()!;
+        _isPrimary = isPrimary;
         _previewParent = previewParent;
         _cacheDir = Path.Combine(_baseDir, "cache");
         Directory.CreateDirectory(_cacheDir);
         FormBorderStyle = FormBorderStyle.None;
-        WindowState = _previewParent == IntPtr.Zero ? FormWindowState.Maximized : FormWindowState.Normal;
-        TopMost = _previewParent == IntPtr.Zero;
-        ShowInTaskbar = _previewParent == IntPtr.Zero;
         BackColor = Color.Black;
-        if (_previewParent == IntPtr.Zero) Cursor.Hide();
+
+        if (_previewParent == IntPtr.Zero)
+        {
+            StartPosition = FormStartPosition.Manual;
+            Bounds = _screen.Bounds;
+            WindowState = FormWindowState.Normal;
+            TopMost = true;
+            ShowInTaskbar = false;
+            Cursor.Hide();
+        }
+        else
+        {
+            WindowState = FormWindowState.Normal;
+        }
+
         Controls.Add(_picture);
         Controls.Add(_notice);
-        KeyDown += (_, _) => Close();
-        MouseDown += (_, _) => Close();
-        MouseMove += (_, e) => { if (_startMouse != Point.Empty && Distance(_startMouse, e.Location) > 8) Close(); };
+
+        // 어느 모니터에서든 사용자 입력(키보드/마우스) 발생 시 모든 화면보호기 창 일괄 종료
+        KeyDown += (_, _) => Application.Exit();
+        MouseDown += (_, _) => Application.Exit();
+        MouseMove += (_, e) => { if (_startMouse != Point.Empty && Distance(_startMouse, e.Location) > 8) Application.Exit(); };
         Load += (_, _) => AttachPreviewWindow();
         Shown += async (_, _) => { _startMouse = PointToClient(Cursor.Position); await SyncAndStart(); };
         _slideTimer.Tick += (_, _) => ShowNext();
-        _syncTimer.Tick += async (_, _) => await SyncAndStart(false);
+        if (_isPrimary)
+        {
+            _syncTimer.Tick += async (_, _) => await SyncAndStart(false);
+        }
     }
 
     private async Task SyncAndStart(bool startTimers = true)
@@ -75,8 +111,11 @@ public sealed class ScreensaverForm : Form
         {
             ShowNext();
             _slideTimer.Start();
-            _syncTimer.Start();
+            if (_isPrimary) _syncTimer.Start();
         }
+
+        // 다운로드는 주 모니터 폼에서만 수행하여 파일 동시쓰기 충돌 방지
+        if (!_isPrimary) return;
 
         try
         {
@@ -166,18 +205,29 @@ public sealed class ScreensaverForm : Form
 
     private void ShowNext()
     {
+        if (_images.Count == 0) RefreshImageList();
+
         if (_images.Count == 0)
         {
             _picture.Image = null;
             _notice.Text = "Screensaver images have not been downloaded yet.";
             return;
         }
+
         _index = (_index + 1) % _images.Count;
-        using var stream = File.OpenRead(_images[_index]);
-        var next = Image.FromStream(stream);
-        var old = _picture.Image;
-        _picture.Image = next;
-        old?.Dispose();
+        try
+        {
+            var bytes = File.ReadAllBytes(_images[_index]);
+            using var ms = new MemoryStream(bytes);
+            var next = Image.FromStream(ms);
+            var old = _picture.Image;
+            _picture.Image = next;
+            old?.Dispose();
+        }
+        catch
+        {
+            // 파일 갱신 타이밍 등으로 읽기 실패 시 안전하게 무시
+        }
     }
 
     private static async Task<T?> ReadJson<T>(string path)
@@ -218,7 +268,7 @@ public sealed class ScreensaverForm : Form
 
 public sealed class LocalSettings
 {
-    [JsonPropertyName("configUrl")] public string ConfigUrl { get; set; } = "";
+    [JsonPropertyName("configUrl")] public string ConfigUrl { get; set; } = "https://nature-screensaver.vercel.app/config.json";
     public static LocalSettings Default() => new();
 }
 

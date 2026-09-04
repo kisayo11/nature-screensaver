@@ -1,4 +1,4 @@
-﻿# Build outputs
+# Build outputs
 client/bin/
 client/obj/
 installer/Output/
@@ -15,5 +15,7 @@ Thumbs.db
 .vercel
 .env*
 
-# Local generated deployment config
-config.json
+# Local generated deployment config (root only)
+/config.json
+!admin-web/config.json
+

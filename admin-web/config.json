@@ -1,0 +1,28 @@
+{
+  "version": "2026.07.27.001",
+  "updateIntervalMinutes": 60,
+  "slideDurationSeconds": 20,
+  "backgroundColor": "#050505",
+  "fitMode": "contain",
+  "notice": "4주기 인증 준비",
+  "slides": [
+    {
+      "order": 1,
+      "title": "환자확인",
+      "fileName": "슬라이드2.png",
+      "url": "https://drive.google.com/uc?export=download&id=1okk9hWdLxcw2Ji1xuocFhSGy9qOmod0y"
+    },
+    {
+      "order": 2,
+      "title": "환자권리",
+      "fileName": "슬라이드1.png",
+      "url": "https://drive.google.com/uc?export=download&id=1ZKf9X5O6d5qSxa4-bDedhqZNBnDJKID2"
+    },
+    {
+      "order": 3,
+      "title": "화재대응",
+      "fileName": "슬라이드3.png",
+      "url": "https://drive.google.com/uc?export=download&id=1C467TQXSMn_J1bRvFSRiRq1j6hNAfDAV"
+    }
+  ]
+}

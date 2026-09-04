@@ -1,4 +1,61 @@
-# Google Apps Script(GAS)를 이용한 config.json 자동 업로드 세팅 가이드
+# Google Apps Script (GAS) Setup Guide for config.json Auto-Upload (English)
+
+This is a one-time setup guide to enable automatic overwriting and uploading of the `config.json` file in Google Drive with a single click from the Admin Web App.
+
+---
+
+## Step 1: Create Google Apps Script (Takes about 1 minute)
+
+1. Sign in to Google Drive and open [Google Apps Script (script.google.com)](https://script.google.com).
+2. Click the **[New project]** button in the top left.
+3. Delete all existing code and paste the following code:
+
+```javascript
+function doPost(e) {
+  try {
+    // Enter the file ID of config.json on Google Drive below.
+    // e.g., if https://drive.google.com/file/d/1A2B3C4D5E.../view, 1A2B3C4D5E... is the FILE_ID.
+    var TARGET_FILE_ID = "YOUR_GOOGLE_DRIVE_CONFIG_JSON_FILE_ID_HERE";
+    
+    var jsonString = e.postData.contents;
+    var file = DriveApp.getFileById(TARGET_FILE_ID);
+    file.setContent(jsonString);
+    
+    return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "config.json updated successfully" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+```
+
+> **TIP (How to find File ID):**
+> If your Google Drive `config.json` link is `https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view`, the string `1AbCdEfGhIjKlMnOp` between `/d/` and `/view` is the **FILE_ID**.
+
+---
+
+## Step 2: Deploy as a Web App
+
+1. Click **[Deploy]** -> **[New deployment]** at the top right.
+2. Click the gear icon (Select type) and select **[Web app]**.
+3. Configure the following options:
+   - **Description**: `Nature Screensaver Config Uploader`
+   - **Execute as**: `Me (your email)`
+   - **Who has access**: **`Anyone`**
+4. Click the **[Deploy]** button at the bottom. When the Google permission authorization window appears, proceed with **[Review permissions]** -> **[Advanced]** -> **[Go to ... (unsafe)]** -> **[Allow]**.
+5. Once deployment is complete, copy the generated **Web app URL** (e.g., `https://script.google.com/macros/s/.../exec`).
+
+---
+
+## Step 3: Register URL in Admin Web
+
+1. Access the `Nature Screensaver Admin Web` and paste the copied **Web app URL** into the **[Google Drive Sync Settings]** field at the top.
+2. Now, after configuring slides, simply click **[Upload config.json to Google Drive]** to automatically update `config.json` in Google Drive!
+
+---
+
+# Google Apps Script(GAS)를 이용한 config.json 자동 업로드 세팅 가이드 (한국어)
 
 관리자 웹앱에서 버튼 클릭 한 번으로 구글 드라이브의 `config.json` 파일을 자동으로 덮어쓰기 업로드하기 위한 원타임(1회) 세팅 가이드입니다.
 
