@@ -62,16 +62,20 @@ const server = http.createServer((req, res) => {
         const repoRoot = path.join(__dirname, '..');
         const commitMsg = `Deploy screensaver version ${config.version || Date.now()}`;
 
-        exec(`git add admin-web/slides admin-web/config.json config.json && git commit -m "${commitMsg}" && git push origin main`, { cwd: repoRoot }, (execErr, stdout, stderr) => {
+        // 루트 config.json은 gitignore 대상이므로 admin-web 경로만 안전하게 스테이징
+        const gitCmd = `git add admin-web/slides admin-web/config.json && git commit -m "${commitMsg}" && git push origin main`;
+
+        exec(gitCmd, { cwd: repoRoot, shell: 'powershell.exe' }, (execErr, stdout, stderr) => {
           if (execErr) {
             console.error('Git Push Error:', stderr || execErr.message);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ 
               status: 'warning', 
-              message: '로컬 저장은 완료되었으나 Git Push 중 오류가 발생했습니다. (자세한 로그는 터미널 확인)' 
+              message: '로컬 저장은 완료되었으나 Git Push 중 오류가 발생했습니다: ' + (stderr || execErr.message)
             }));
           } else {
             console.log('🚀 Git Push 및 Vercel 배포 트리거 성공!');
+            console.log(stdout);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ 
               status: 'success', 
