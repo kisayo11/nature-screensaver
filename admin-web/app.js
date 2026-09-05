@@ -4,7 +4,6 @@ const output = document.querySelector("#output");
 const preview = document.querySelector("#preview");
 const statusBadge = document.querySelector("#statusBadge");
 const statusText = document.querySelector("#statusText");
-const gasUrlInput = document.querySelector("#gasUrl");
 const githubTokenInput = document.querySelector("#githubToken");
 const githubStatusBadge = document.querySelector("#githubStatusBadge");
 const testGithubBtn = document.querySelector("#testGithubBtn");
@@ -47,13 +46,11 @@ const confirmPwd = document.querySelector("#confirmPwd");
 const pwdChangeError = document.querySelector("#pwdChangeError");
 
 const draftKey = "natureScreensaverAdminDraft";
-const gasKey = "natureScreensaverGasUrl";
 const historyKey = "natureScreensaverHistory";
 const authKey = "natureScreensaverAuth";
 const pwdKey = "natureScreensaverPassword";
 const githubTokenKey = "natureScreensaverGithubToken";
-const defaultPassword = "nature1234";
-const defaultGasUrl = "https://script.google.com/macros/s/AKfycbwYdwib_0u08GMu6-SwRa5LLG0tERvrlkTgTiug1Ws_j2pOMts1gdDs-OYroLBBZJAN-A/exec";
+const defaultPassword = "01053884497";
 
 const GITHUB_OWNER = "kisayo11";
 const GITHUB_REPO = "nature-screensaver";
@@ -67,11 +64,11 @@ const text = {
   copied: "복사 완료",
   downloaded: "다운로드 완료",
   uploading: "배포 처리 중...",
-  uploaded: "배포 및 백업 완료!",
+  uploaded: "배포 완료!",
   uploadFailed: "배포 실패: ",
   untitled: "제목 없음",
   titlePlaceholder: "예: 정확한 환자확인 / 심폐소생술 절차",
-  drivePlaceholder: "구글 드라이브 링크 또는 이미지 파일명",
+  drivePlaceholder: "슬라이드 이미지 파일명 또는 URL (예: 슬라이드1.PNG)",
   folderWarning: "폴더 링크는 지원되지 않습니다. 개별 이미지 파일 또는 공유 링크를 넣어주세요."
 };
 
@@ -97,19 +94,47 @@ function extractDriveId(value) {
   return fileMatch?.[1] || idParam?.[1] || "";
 }
 
-function driveDownloadUrl(value) {
-  const raw = String(value || "").trim();
+function getSlideImageUrl(url, localDataUrl = null) {
+  if (localDataUrl) return localDataUrl;
+  const raw = String(url || "").trim();
   if (!raw) return "";
-  if (isDriveFolderUrl(raw)) return raw;
-  const id = extractDriveId(raw);
-  if (id) return `https://drive.google.com/uc?export=download&id=${id}`;
-  return raw;
+
+  // 1. 구글 드라이브 링크인 경우
+  if (raw.includes("drive.google.com")) {
+    const id = extractDriveId(raw);
+    if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+  }
+
+  // 2. data: URL (로컬 업로드 Base64)
+  if (raw.startsWith("data:")) return raw;
+
+  // 3. 로컬 호스트(localhost)에서 실행 중이고 URL이 vercel slides 주소인 경우 로컬 경로 매핑
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    if (raw.includes("/slides/")) {
+      const fileName = raw.substring(raw.lastIndexOf("/slides/") + 8);
+      return `/slides/${fileName}`;
+    }
+  }
+
+  // 4. 일반 http/https 절대 URL
+  if (raw.startsWith("http://") || raw.startsWith("https://")) {
+    return raw;
+  }
+
+  // 5. 상대 경로 (/slides/... 또는 slides/...)
+  if (raw.startsWith("/")) return raw;
+  if (raw.startsWith("slides/")) return "/" + raw;
+
+  // 6. 파일명만 있는 경우 (예: 슬라이드1.PNG)
+  return `/slides/${raw}`;
+}
+
+function driveDownloadUrl(value) {
+  return String(value || "").trim();
 }
 
 function driveThumbnailUrl(value) {
-  const id = extractDriveId(value);
-  if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w600`;
-  return "";
+  return getSlideImageUrl(value);
 }
 
 function makeDefaultFileName(order) {
@@ -247,7 +272,7 @@ function renderSlideCard(data = {}) {
 
   const currentCount = slidesList.querySelectorAll(".slide-card").length;
   const orderVal = data.order ?? currentCount + 1;
-  const thumbUrl = data.localDataUrl || driveThumbnailUrl(data.url || "");
+  const thumbUrl = getSlideImageUrl(data.url, data.localDataUrl);
   const isLocalImage = Boolean(data.localDataUrl);
 
   const thumbHtml = thumbUrl
@@ -285,7 +310,7 @@ function renderSlideCard(data = {}) {
       </div>
 
       <div class="input-sm-wrap">
-        <label>구글 드라이브 링크 (또는 파일 경로)</label>
+        <label>슬라이드 이미지 주소 (URL 또는 파일명)</label>
         <input class="slide-url" value="${esc(data.url ?? "")}" placeholder="${text.drivePlaceholder}" spellcheck="false" />
       </div>
     </div>
@@ -889,22 +914,7 @@ async function executeDeploy() {
       setDeployStep("stepCommit", "done", 88, "로컬 Git 커밋 & 푸시 완료");
     }
 
-    // 5단계: 구글 드라이브 백업 + Vercel 트리거
-    setDeployStep("stepVercel", "active", 92, "Vercel 배포 트리거 및 구글 드라이브 백업 확인 중...");
-    const gasUrl = gasUrlInput?.value?.trim();
-    if (gasUrl && gasUrl.startsWith("https://script.google.com/")) {
-      try {
-        fetch(gasUrl, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify(config, null, 2)
-        }).catch(err => console.warn("구글 드라이브 백업 요청 예외:", err));
-      } catch (e) {
-        console.warn("구글 드라이브 백업 실패:", e);
-      }
-    }
-
+    // 5단계: Vercel 배포 트리거 완료
     setDeployStep("stepVercel", "done", 100, "전 병원 PC 배포 준비 완료!");
     setStatus("배포 완료 (Vercel CDN 갱신 중)", "success");
     if (deployProgressTitle) deployProgressTitle.textContent = "🎉 전 병원 PC 배포 성공!";
@@ -1012,15 +1022,20 @@ function showSimSlide(index) {
 
   simInfo.textContent = `${simIndex + 1} / ${simSlides.length} 슬라이드 (${current.title || text.untitled})`;
   
-  // 로컬 카드의 데이터 URL이 있으면 우선 사용
+  // 로컬 카드의 데이터 URL이 있으면 우선 사용하고, 없으면 이미지 URL 변환
   const card = [...slidesList.querySelectorAll(".slide-card")][simIndex];
   const localUrl = card?.dataset?.localDataUrl;
-  const thumbUrl = localUrl || driveThumbnailUrl(current.url);
+  const thumbUrl = getSlideImageUrl(current.url, localUrl);
 
   if (thumbUrl) {
     simImg.src = thumbUrl;
     simImg.hidden = false;
     simFallback.hidden = true;
+    simImg.onerror = () => {
+      simImg.hidden = true;
+      simFallback.hidden = false;
+      simFallbackTitle.textContent = current.title || text.untitled;
+    };
   } else {
     simImg.hidden = true;
     simFallback.hidden = false;
@@ -1108,13 +1123,6 @@ function versionStamp() {
 }
 
 function loadDraft() {
-  if (gasUrlInput) {
-    gasUrlInput.value = localStorage.getItem(gasKey) || defaultGasUrl;
-    gasUrlInput.addEventListener("input", () => {
-      localStorage.setItem(gasKey, gasUrlInput.value.trim());
-    });
-  }
-
   // GitHub 토큰 초기화 및 자동 연결 검증
   if (githubTokenInput) {
     githubTokenInput.value = localStorage.getItem(githubTokenKey) || "";
@@ -1289,30 +1297,6 @@ jsonToggle.addEventListener("click", () => {
     generate();
   }
 });
-
-// GAS 가이드 모달
-const gasGuideModal = document.querySelector("#gasGuideModal");
-const openGasGuideBtn = document.querySelector("#openGasGuide");
-const gasGuideCloseBtn = document.querySelector("#gasGuideClose");
-const gasGuideOkBtn = document.querySelector("#gasGuideOk");
-const copyGasCodeBtn = document.querySelector("#copyGasCode");
-
-if (openGasGuideBtn && gasGuideModal) {
-  openGasGuideBtn.addEventListener("click", () => { gasGuideModal.hidden = false; });
-  gasGuideCloseBtn.addEventListener("click", () => { gasGuideModal.hidden = true; });
-  gasGuideOkBtn.addEventListener("click", () => { gasGuideModal.hidden = true; });
-}
-
-if (copyGasCodeBtn) {
-  copyGasCodeBtn.addEventListener("click", async () => {
-    const code = document.querySelector("#gasCodeBlock code")?.textContent;
-    if (code) {
-      await navigator.clipboard.writeText(code);
-      copyGasCodeBtn.textContent = "✅ 복사 완료!";
-      setTimeout(() => { copyGasCodeBtn.textContent = "📋 코드 복사"; }, 2000);
-    }
-  });
-}
 
 // 전역 인풋 리스너
 ["#version", "#interval", "#duration", "#notice"].forEach(sel => {

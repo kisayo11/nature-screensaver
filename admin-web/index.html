@@ -27,7 +27,7 @@
         </div>
         <div id="authErrorMsg" class="lock-error" hidden>비밀번호가 올바르지 않습니다.</div>
         <div class="lock-hint">
-          <span>💡 초기 기본 비밀번호: <strong>nature1234</strong></span>
+          <span>💡 초기 기본 비밀번호: <strong>관리자번호</strong></span>
         </div>
       </form>
     </div>
@@ -109,7 +109,7 @@
           <div class="section-icon">⚙️</div>
           <div>
             <h2 class="card-title">배포 및 화면보호기 기본 설정</h2>
-            <p class="card-subtitle">버전 번호, 재생 주기, 슬라이드 시간 및 공지사항을 설정합니다. (구글 드라이브 백업은 하단)</p>
+            <p class="card-subtitle">버전 번호, 재생 주기, 슬라이드 시간 및 공지사항을 설정합니다.</p>
           </div>
         </div>
         <button type="button" class="icon-toggle" aria-label="설정 펼치기/접기">
@@ -185,19 +185,6 @@
             </div>
             <button id="testGithubBtn" type="button" class="btn btn-secondary btn-sm">⚡ 연결 테스트</button>
             <button id="openGithubGuide" type="button" class="btn btn-primary btn-sm">📖 1분 토큰 발급 가이드</button>
-          </div>
-        </div>
-
-        <!-- 구글 드라이브 백업 연동 배너 (하단 배치, 선택사항) -->
-        <div class="integration-banner gas-banner">
-          <div class="banner-info">
-            <span class="badge-tag gas-badge">선택사항 (백업용)</span>
-            <strong>구글 드라이브 자동 백업 연동</strong>
-            <p>신규 인스톨러는 Vercel을 직접 바라보므로 필수가 아닙니다. 구글 드라이브에도 백업본을 남기고 싶으실 때만 연동 URL을 입력하시면 됩니다.</p>
-          </div>
-          <div class="banner-controls">
-            <input id="gasUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec (선택사항)" spellcheck="false" />
-            <button id="openGasGuide" type="button" class="btn btn-outline btn-sm">📖 1분 세팅 가이드</button>
           </div>
         </div>
       </div>
@@ -376,77 +363,6 @@
         <button id="simPrev" type="button" class="sim-btn">◀ 이전 슬라이드</button>
         <button id="simToggle" type="button" class="sim-btn accent">⏸ 일시정지</button>
         <button id="simNext" type="button" class="sim-btn">다음 슬라이드 ▶</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Google Apps Script 1분 세팅 가이드 모달 -->
-  <div id="gasGuideModal" class="modal-overlay" hidden>
-    <div class="modal-card wide">
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <span class="modal-icon">📖</span>
-          <h3>구글 드라이브 원클릭 자동 배포 세팅 가이드</h3>
-        </div>
-        <button id="gasGuideClose" type="button" class="icon-close-btn">&times;</button>
-      </div>
-      <div class="modal-body guide-body">
-        <div class="guide-step">
-          <div class="step-badge">1단계</div>
-          <h4>Google Apps Script 프로젝트 생성 (1분 소요)</h4>
-          <ol>
-            <li><a href="https://script.google.com" target="_blank" class="link-btn">Google Apps Script(script.google.com)</a> 에 접속하여 로그인 후 <strong>[새 프로젝트]</strong>를 클릭합니다.</li>
-            <li>기존 코드를 모두 지우고 아래의 스크립트 코드를 붙여넣습니다:</li>
-          </ol>
-          <div class="code-box">
-            <div class="code-header">
-              <span>Google Apps Script (Code.gs)</span>
-              <button id="copyGasCode" type="button" class="btn btn-secondary btn-sm">📋 코드 복사</button>
-            </div>
-            <pre id="gasCodeBlock"><code>function doPost(e) {
-  try {
-    // 구글 드라이브의 config.json 파일 ID를 아래 입력하세요.
-    // 예: https://drive.google.com/file/d/1A2B3C4D5E.../view 이라면 1A2B3C4D5E... 가 FILE_ID입니다.
-    var TARGET_FILE_ID = "여기에_구글드라이브_CONFIG_JSON_파일ID_입력";
-    
-    var jsonString = e.postData.contents;
-    var file = DriveApp.getFileById(TARGET_FILE_ID);
-    file.setContent(jsonString);
-    
-    return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "config.json updated successfully" }))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}</code></pre>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-badge">2단계</div>
-          <h4>웹 앱으로 배포하기</h4>
-          <ol>
-            <li>우측 상단 <strong>[배포] ➔ [새 배포]</strong> 클릭 후 톱니바퀴 아이콘에서 <strong>[웹 앱]</strong>을 선택합니다.</li>
-            <li>설정:
-              <ul>
-                <li><strong>다음 사용자 권한으로 실행</strong>: <code>나(내 이메일)</code></li>
-                <li><strong>액세스 권한 있는 사용자</strong>: <strong><code>모든 사용자(Anyone)</code></strong></li>
-              </ul>
-            </li>
-            <li><strong>[배포]</strong> 클릭 ➔ 구글 권한 승인 창에서 <strong>[권한 검토] ➔ [고급] ➔ [안전하지 않음으로 이동] ➔ [허용]</strong>을 진행합니다.</li>
-            <li>배포 완료 후 표시되는 <strong>웹 앱 URL</strong> (<code>https://script.google.com/macros/s/.../exec</code>)을 복사합니다.</li>
-          </ol>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-badge">3단계</div>
-          <h4>관리자 웹에 연동하기</h4>
-          <p>복사한 URL을 어드민 상단 [설정]의 <strong>Google Apps Script 연동 URL</strong> 칸에 붙여넣으면 완료됩니다! 이제 [구글 드라이브에 배포] 버튼을 누를 때마다 구글 드라이브의 <code>config.json</code>이 자동으로 최신화됩니다.</p>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button id="gasGuideOk" type="button" class="btn btn-primary">확인 완료</button>
       </div>
     </div>
   </div>
