@@ -1,14 +1,18 @@
 <!doctype html>
 <html lang="ko">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>네이처 인증 화면보호기 관리자 | Nature Screensaver Admin</title>
+  <title>네이처 화면보호기 관리자 | Nature Screensaver Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
   <!-- 보안 락 스크린 (비밀번호 인증) -->
   <div id="authLockScreen" class="lock-screen-overlay">
@@ -19,10 +23,11 @@
       </div>
       <h2 class="lock-title">네이처 관리자 인증</h2>
       <p class="lock-desc">화면보호기 설정 및 슬라이드 관리를 위해 비밀번호를 입력해주세요.</p>
-      
+
       <form id="authForm" class="lock-form" onsubmit="return false;">
         <div class="lock-input-wrap">
-          <input type="password" id="authPasswordInput" placeholder="비밀번호 입력" autofocus autocomplete="current-password" />
+          <input type="password" id="authPasswordInput" placeholder="비밀번호 입력" autofocus
+            autocomplete="current-password" />
           <button type="submit" id="authSubmitBtn" class="btn btn-primary">확인</button>
         </div>
         <div id="authErrorMsg" class="lock-error" hidden>비밀번호가 올바르지 않습니다.</div>
@@ -37,40 +42,61 @@
   <header class="app-header">
     <div class="header-container">
       <div class="brand">
-        <div class="brand-logo">🌿</div>
         <div>
           <div class="brand-eyebrow">HOSPITAL ACCREDITATION DISPLAY</div>
-          <h1 class="brand-title">네이처 인증 화면보호기 관리자</h1>
+          <h1 class="brand-title">네이처 화면보호기 관리자</h1>
         </div>
         <div id="statusBadge" class="status-badge waiting">
           <span class="status-dot"></span>
           <span id="statusText">대기 중</span>
         </div>
       </div>
-      
+
       <div class="header-actions">
         <button id="lockAppBtn" type="button" class="btn btn-secondary" title="화면 잠금">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
           잠금
         </button>
         <button id="changePwdOpen" type="button" class="btn btn-secondary" title="비밀번호 변경">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="7.5" cy="15.5" r="5.5" />
+            <path d="m21 2-9.6 9.6" />
+            <path d="m15.5 7.5 3 3L22 7l-3-3" />
+          </svg>
           암호변경
         </button>
         <button id="historyOpen" type="button" class="btn btn-secondary">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
           배포 이력
         </button>
         <button id="importOpen" type="button" class="btn btn-secondary">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
           불러오기
         </button>
         <button id="openSimulator" type="button" class="btn btn-simulator">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+          </svg>
           화면보호기 미리보기
         </button>
         <button id="uploadDrive" type="button" class="btn btn-primary">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+            <polyline points="16 16 12 12 8 16" />
+            <line x1="12" y1="12" x2="12" y2="21" />
+          </svg>
           배포하기
         </button>
       </div>
@@ -102,9 +128,9 @@
       </div>
     </section>
 
-    <!-- 설정 섹션 (접이식 어코디언) -->
+    <!-- 설정 섹션 -->
     <section class="card settings-card">
-      <div class="card-header" id="settingsToggle">
+      <div class="card-header">
         <div class="card-header-left">
           <div class="section-icon">⚙️</div>
           <div>
@@ -112,9 +138,6 @@
             <p class="card-subtitle">버전 번호, 재생 주기, 슬라이드 시간 및 공지사항을 설정합니다.</p>
           </div>
         </div>
-        <button type="button" class="icon-toggle" aria-label="설정 펼치기/접기">
-          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
       </div>
 
       <div class="card-body" id="settingsContent">
@@ -180,7 +203,8 @@
           </div>
           <div class="banner-controls github-controls">
             <div class="github-token-wrap">
-              <input id="githubToken" type="password" placeholder="ghp_... (GitHub Personal Access Token)" spellcheck="false" autocomplete="off" />
+              <input id="githubToken" type="password" placeholder="ghp_... (GitHub Personal Access Token)"
+                spellcheck="false" autocomplete="off" />
               <button id="toggleGithubToken" type="button" class="btn-token-eye" title="토큰 표시/숨김">👁️</button>
             </div>
             <button id="testGithubBtn" type="button" class="btn btn-secondary btn-sm">⚡ 연결 테스트</button>
@@ -200,10 +224,14 @@
             <p class="card-subtitle">드래그(⋮⋮)하거나 상/하 버튼으로 순서를 변경할 수 있습니다.</p>
           </div>
         </div>
-        
+
         <div class="card-actions">
           <label for="imageBatchInput" class="btn btn-primary btn-sm btn-upload-label">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
             이미지 파일들 선택 추가
             <input type="file" id="imageBatchInput" accept="image/png,image/jpeg" multiple hidden />
           </label>
@@ -229,12 +257,13 @@
       <div id="bulkPanel" class="bulk-drawer" hidden>
         <div class="bulk-inner">
           <label for="bulkLinks" class="bulk-label">
-            <strong>구글 드라이브 파일 링크 일괄 등록</strong>
-            <span>여러 개의 구글 드라이브 공유 링크를 한 줄에 하나씩 붙여넣으세요.</span>
+            <strong>슬라이드 이미지 링크 일괄 등록</strong>
+            <span>여러 개의 이미지 웹 링크(또는 공유 링크)를 한 줄에 하나씩 붙여넣으세요.</span>
           </label>
-          <textarea id="bulkLinks" spellcheck="false" rows="4" placeholder="https://drive.google.com/file/d/1A.../view&#10;https://drive.google.com/file/d/1B.../view"></textarea>
+          <textarea id="bulkLinks" spellcheck="false" rows="4"
+            placeholder="https://example.com/slide1.png&#10;https://example.com/slide2.png"></textarea>
           <div class="bulk-footer">
-            <span class="hint-text">⚠️ 폴더 링크는 지원되지 않으며 개별 PNG 파일 링크만 지원합니다.</span>
+            <span class="hint-text">⚠️ 한 줄에 하나의 이미지 파일 URL을 입력해 주세요.</span>
             <button id="bulkAdd" type="button" class="btn btn-primary btn-sm">목록에 일괄 추가</button>
           </div>
         </div>
@@ -244,7 +273,7 @@
       <div class="slides-container" id="slidesList">
         <!-- JS에 의해 .slide-card 가 렌더링됩니다 -->
       </div>
-      
+
       <!-- 빈 상태 안내 -->
       <div id="emptyState" class="empty-state" hidden>
         <div class="empty-icon">📭</div>
@@ -268,12 +297,15 @@
           <button id="copy" type="button" class="btn btn-secondary btn-sm">복사</button>
           <button id="download" type="button" class="btn btn-secondary btn-sm">다운로드</button>
           <button type="button" class="icon-toggle" aria-label="JSON 펼치기/접기">
-            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
           </button>
         </div>
       </div>
       <div class="card-body" id="jsonContent" hidden>
-        <textarea id="output" spellcheck="false" rows="10" placeholder="JSON 생성 버튼을 누르면 config.json 내용이 표시됩니다."></textarea>
+        <textarea id="output" spellcheck="false" rows="10"
+          placeholder="JSON 생성 버튼을 누르면 config.json 내용이 표시됩니다."></textarea>
       </div>
     </section>
   </main>
@@ -285,18 +317,22 @@
         <span class="save-status">💾 브라우저에 실시간 자동저장 중</span>
       </div>
       <div class="floating-actions">
-        <button id="floatSimulator" type="button" class="btn btn-secondary">
-          📺 미리보기
-        </button>
         <button id="floatUpload" type="button" class="btn btn-primary">
-          ☁️ 구글 드라이브에 즉시 배포
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px; margin-right:4px;">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+            <polyline points="16 16 12 12 8 16" />
+            <line x1="12" y1="12" x2="12" y2="21" />
+          </svg>
+          🚀 전 병원 PC 즉시 배포
         </button>
       </div>
     </div>
   </aside>
 
   <!-- 숨겨진 호환용 tbody (기존 DOM 셀렉터 호환 유지) -->
-  <table id="slides" style="display:none;"><tbody></tbody></table>
+  <table id="slides" style="display:none;">
+    <tbody></tbody>
+  </table>
   <ol id="preview" style="display:none;"></ol>
   <div id="status" style="display:none;">대기 중</div>
 
@@ -321,7 +357,8 @@
             </div>
           </label>
           <div class="divider-text"><span>또는 JSON 텍스트 직접 붙여넣기</span></div>
-          <textarea id="importTextarea" class="code-font" placeholder='{"version": "2026.07.27.001", "slides": [...]}'></textarea>
+          <textarea id="importTextarea" class="code-font"
+            placeholder='{"version": "2026.07.27.001", "slides": [...]}'></textarea>
         </div>
       </div>
       <div class="modal-footer">
@@ -346,7 +383,7 @@
           <button id="simClose" type="button" class="sim-close-btn">닫기 ✕</button>
         </div>
       </div>
-      
+
       <div class="simulator-stage" id="simStage">
         <div class="sim-slide-wrap">
           <img id="simImg" src="" alt="슬라이드" />
@@ -446,7 +483,9 @@
           <h4>GitHub 토큰 자동 생성 페이지 열기</h4>
           <p>아래 버튼을 누르면 <strong><code>repo</code> 권한이 자동 체크된 토큰 생성 페이지</strong>가 새 탭으로 바로 열립니다. (GitHub 로그인이 필요합니다.)</p>
           <div style="margin-top: 10px;">
-            <a href="https://github.com/settings/tokens/new?description=nature-screensaver-admin&scopes=repo" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none;">
+            <a href="https://github.com/settings/tokens/new?description=nature-screensaver-admin&scopes=repo"
+              target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm"
+              style="display:inline-flex; align-items:center; gap:6px; text-decoration:none;">
               🚀 GitHub 토큰 생성 페이지 바로가기 ↗
             </a>
           </div>
@@ -458,7 +497,8 @@
           <p>
             • <strong>Note (이름)</strong>: <code>nature-screensaver-admin</code> 자동 입력됨<br>
             • <strong>Expiration (유효기간)</strong>: <code>No expiration</code> (만료 없음 권장)<br>
-            • <strong>Select scopes</strong>: 맨 위의 <strong><code>repo</code></strong> (Full control of private repositories)가 체크되어 있는지 확인<br>
+            • <strong>Select scopes</strong>: 맨 위의 <strong><code>repo</code></strong> (Full control of private
+            repositories)가 체크되어 있는지 확인<br>
             • 화면 맨 아래의 초록색 <strong>[Generate token]</strong> 버튼을 클릭합니다.
           </p>
         </div>
@@ -466,7 +506,8 @@
         <div class="guide-step">
           <div class="step-badge">3단계</div>
           <h4>토큰 복사 및 관리자 웹에 등록</h4>
-          <p>화면에 생성된 <code>ghp_...</code> 로 시작하는 토큰 문자열을 복사한 뒤, 관리자 웹 상단의 <strong>GitHub API 토큰</strong> 칸에 붙여넣고 <strong>[⚡ 연결 테스트]</strong>를 누르시면 완료됩니다!</p>
+          <p>화면에 생성된 <code>ghp_...</code> 로 시작하는 토큰 문자열을 복사한 뒤, 관리자 웹 상단의 <strong>GitHub API 토큰</strong> 칸에 붙여넣고
+            <strong>[⚡ 연결 테스트]</strong>를 누르시면 완료됩니다!</p>
         </div>
       </div>
       <div class="modal-footer">
@@ -520,4 +561,5 @@
 
   <script src="app.js"></script>
 </body>
+
 </html>

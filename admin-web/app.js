@@ -1075,8 +1075,7 @@ function openSimulator() {
   startSimTimer();
 }
 
-document.querySelector("#openSimulator").addEventListener("click", openSimulator);
-document.querySelector("#floatSimulator").addEventListener("click", openSimulator);
+document.querySelector("#openSimulator")?.addEventListener("click", openSimulator);
 
 document.querySelector("#simClose").addEventListener("click", () => {
   stopSimTimer();
@@ -1278,15 +1277,7 @@ document.querySelector("#download").addEventListener("click", () => {
   setStatus(text.downloaded, "success");
 });
 
-// 어코디언 토글
-const settingsToggle = document.querySelector("#settingsToggle");
-const settingsContent = document.querySelector("#settingsContent");
-settingsToggle.addEventListener("click", () => {
-  const isHidden = settingsContent.hidden;
-  settingsContent.hidden = !isHidden;
-  settingsToggle.classList.toggle("collapsed", !isHidden);
-});
-
+// JSON 아코디언 토글
 const jsonToggle = document.querySelector("#jsonToggle");
 const jsonContent = document.querySelector("#jsonContent");
 jsonToggle.addEventListener("click", () => {
