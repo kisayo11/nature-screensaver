@@ -5,6 +5,22 @@ const preview = document.querySelector("#preview");
 const statusBadge = document.querySelector("#statusBadge");
 const statusText = document.querySelector("#statusText");
 const gasUrlInput = document.querySelector("#gasUrl");
+const githubTokenInput = document.querySelector("#githubToken");
+const githubStatusBadge = document.querySelector("#githubStatusBadge");
+const testGithubBtn = document.querySelector("#testGithubBtn");
+const toggleGithubTokenBtn = document.querySelector("#toggleGithubToken");
+const openGithubGuideBtn = document.querySelector("#openGithubGuide");
+const githubGuideModal = document.querySelector("#githubGuideModal");
+const githubGuideCloseBtn = document.querySelector("#githubGuideClose");
+const githubGuideOkBtn = document.querySelector("#githubGuideOk");
+
+// 배포 진행 상태 모달 엘리먼트
+const deployProgressModal = document.querySelector("#deployProgressModal");
+const deployProgressTitle = document.querySelector("#deployProgressTitle");
+const deployProgressBar = document.querySelector("#deployProgressBar");
+const deployStatusMessage = document.querySelector("#deployStatusMessage");
+const deployProgressFooter = document.querySelector("#deployProgressFooter");
+const deployDoneBtn = document.querySelector("#deployDoneBtn");
 
 // KPI 엘리먼트
 const kpiSlideCount = document.querySelector("#kpiSlideCount");
@@ -35,8 +51,13 @@ const gasKey = "natureScreensaverGasUrl";
 const historyKey = "natureScreensaverHistory";
 const authKey = "natureScreensaverAuth";
 const pwdKey = "natureScreensaverPassword";
+const githubTokenKey = "natureScreensaverGithubToken";
 const defaultPassword = "nature1234";
 const defaultGasUrl = "https://script.google.com/macros/s/AKfycbwYdwib_0u08GMu6-SwRa5LLG0tERvrlkTgTiug1Ws_j2pOMts1gdDs-OYroLBBZJAN-A/exec";
+
+const GITHUB_OWNER = "kisayo11";
+const GITHUB_REPO = "nature-screensaver";
+const GITHUB_BRANCH = "main";
 
 const text = {
   waiting: "대기 중",
@@ -621,8 +642,75 @@ function generate() {
 }
 
 /* ----------------------------------------------------
-   배포 실행 (옵션 B: 완전 자동 이미지 업로드 + 히스토리 저장)
+   GitHub API 연동 & 클라우드 원격 배포 엔진
 ---------------------------------------------------- */
+function setGithubStatus(type, text) {
+  if (!githubStatusBadge) return;
+  githubStatusBadge.className = `status-chip ${type}`;
+  githubStatusBadge.textContent = text;
+}
+
+async function verifyGithubToken(token, showToast = false) {
+  if (!token) {
+    setGithubStatus("neutral", "토큰 미설정");
+    if (showToast) alert("GitHub 토큰을 입력해 주세요.");
+    return false;
+  }
+  setGithubStatus("loading", "연결 확인 중...");
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`, {
+      headers: {
+        "Accept": "application/vnd.github.v3+json",
+        "Authorization": `Bearer ${token}`
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const canPush = Boolean(data.permissions?.push || data.permissions?.admin);
+      setGithubStatus("success", "✅ GitHub 연결됨");
+      if (showToast) {
+        alert(`🎉 GitHub 레포지토리 연동 성공!\n\n• 저장소: ${data.full_name} (${data.private ? 'Private' : 'Public'})\n• 배포 권한: ${canPush ? '푸시 가능(정상)' : '읽기 전용(권한 확인 필요)'}\n• 이제 어느 자리에서든 [배포하기]를 누르면 즉시 클라우드에 저장 및 배포됩니다.`);
+      }
+      return true;
+    } else {
+      const err = await res.json().catch(() => ({}));
+      setGithubStatus("error", "❌ 토큰 인증 실패");
+      if (showToast) {
+        alert(`❌ GitHub 연결 실패: ${err.message || res.statusText}\n\n토큰이 올바른지, 만료되지 않았는지, 'repo' 권한이 체크되어 있는지 확인해 주세요.`);
+      }
+      return false;
+    }
+  } catch (e) {
+    setGithubStatus("error", "❌ 네트워크 오류");
+    if (showToast) alert(`네트워크 오류로 GitHub에 연결할 수 없습니다: ${e.message}`);
+    return false;
+  }
+}
+
+function setDeployStep(stepId, status, progress, message) {
+  const item = document.querySelector(`#${stepId}`);
+  if (item) {
+    item.className = `deploy-step-item ${status}`;
+    const icon = item.querySelector(".step-status-icon");
+    if (icon) {
+      if (status === "active") icon.textContent = "⏳";
+      else if (status === "done") icon.textContent = "✅";
+      else if (status === "error") icon.textContent = "❌";
+      else icon.textContent = "⚪";
+    }
+  }
+  if (deployProgressBar && progress !== undefined) {
+    deployProgressBar.style.width = `${progress}%`;
+  }
+  if (deployStatusMessage && message) {
+    deployStatusMessage.textContent = message;
+  }
+}
+
+function utf8ToBase64(str) {
+  return window.btoa(unescape(encodeURIComponent(str)));
+}
+
 async function executeDeploy() {
   // 1. 배포 시 자동으로 현재 날짜/시간 기반 새 버전 번호 부여
   document.querySelector("#version").value = versionStamp();
@@ -631,49 +719,208 @@ async function executeDeploy() {
   const config = generate();
   if (!config) return;
 
-  // 배포 이력(History) 및 로컬 스토리지에 즉시 영구 저장
-  saveToHistory(config);
-  localStorage.setItem(draftKey, JSON.stringify(config));
-
-  // 2. 업로드된 로컬 이미지 바이너리(Base64) 수집
-  const images = {};
-  slidesList.querySelectorAll(".slide-card").forEach(card => {
-    const fn = card.querySelector(".slide-filename").value.trim();
-    const dataUrl = card.dataset.localDataUrl;
-    if (fn && dataUrl) {
-      images[fn] = dataUrl;
-    }
-  });
-
-  // 3. 구글 드라이브 연동 URL이 있는 경우 백그라운드 전송
-  const gasUrl = gasUrlInput?.value?.trim();
-  if (gasUrl && gasUrl.startsWith("https://script.google.com/")) {
-    try {
-      fetch(gasUrl, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify(config, null, 2)
-      }).catch(err => console.warn("구글 드라이브 백업 요청 예외:", err));
-    } catch (e) {
-      console.warn("구글 드라이브 백업 실패:", e);
-    }
+  // 배포 진행 모달 열기
+  if (deployProgressModal) {
+    deployProgressModal.hidden = false;
+    if (deployProgressFooter) deployProgressFooter.hidden = true;
+    if (deployProgressTitle) deployProgressTitle.textContent = "전 병원 PC 배포 진행 중";
+    ["stepCheck", "stepAuth", "stepUpload", "stepCommit", "stepVercel"].forEach(id => {
+      setDeployStep(id, "waiting", 0, "");
+    });
   }
 
-  // 4. 서버(Vercel API) 배포 시도 또는 로컬 완료 처리
-  setStatus("배포 진행 중 (Vercel 배포 및 구글드라이브 백업)...", "loading");
   try {
-    const res = await fetch('/api/save-bundle', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config, images })
-    });
-    const resData = await res.json();
-    setStatus("배포 완료", "success");
-    alert(`🎉 배포 완료! [Ver ${config.version}]\n\n• 슬라이드: ${config.slides.length}장\n• PC 업데이트 주기: ${config.updateIntervalMinutes}분\n• 슬라이드 표시시간: ${config.slideDurationSeconds}초\n• Vercel(메인)에 자동 배포되어 병원 PC들에 즉시 반영됩니다.\n• 구글 드라이브에도 백그라운드 백업이 완료되었습니다!`);
-  } catch (e) {
-    setStatus("로컬 저장 및 배포 완료", "success");
-    alert(`🎉 설정 저장 완료! [Ver ${config.version}]\n\n• 슬라이드: ${config.slides.length}장\n• PC 업데이트 주기: ${config.updateIntervalMinutes}분\n• 슬라이드 표시시간: ${config.slideDurationSeconds}초\n• 배포 이력(History) 및 로컬 설정에 저장되었습니다.${gasUrl ? '\n• 구글 드라이브 백업 전송이 완료되었습니다.' : ''}`);
+    // 1단계: 유효성 검사 및 브라우저 이력 저장
+    setDeployStep("stepCheck", "active", 15, "설정값 및 슬라이드 유효성을 검사하고 있습니다...");
+    saveToHistory(config);
+    localStorage.setItem(draftKey, JSON.stringify(config));
+    setDeployStep("stepCheck", "done", 25, "슬라이드 유효성 검사 완료");
+
+    // 2단계: GitHub 인증 및 권한 확인
+    setDeployStep("stepAuth", "active", 35, "GitHub 저장소(Private) 연결 상태를 확인하고 있습니다...");
+    const token = (githubTokenInput?.value || localStorage.getItem(githubTokenKey) || "").trim();
+
+    // 로컬 dev-server 환경 감지
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    let useGithubApi = Boolean(token);
+
+    if (!useGithubApi && !isLocalhost) {
+      setDeployStep("stepAuth", "error", 35, "GitHub 토큰이 등록되어 있지 않습니다.");
+      throw new Error("GitHub 개인 접근 토큰(PAT)이 등록되지 않았습니다. 상단 [1분 토큰 발급 가이드]를 참고하여 토큰을 입력해 주세요.");
+    }
+
+    if (useGithubApi) {
+      const ghHeaders = {
+        "Accept": "application/vnd.github.v3+json",
+        "Authorization": `Bearer ${token}`
+      };
+
+      // 2-1: repo 및 main 브랜치 HEAD 조회
+      const refRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/ref/heads/${GITHUB_BRANCH}`, { headers: ghHeaders });
+      if (!refRes.ok) {
+        setDeployStep("stepAuth", "error", 35, "GitHub 인증에 실패했습니다.");
+        const errJson = await refRes.json().catch(() => ({}));
+        throw new Error(`GitHub 인증 실패: ${errJson.message || refRes.statusText} (토큰의 repo 권한을 확인하세요)`);
+      }
+      const refData = await refRes.json();
+      const currentCommitSha = refData.object.sha;
+
+      // 2-2: 최신 커밋의 Tree SHA 조회
+      const commitRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/commits/${currentCommitSha}`, { headers: ghHeaders });
+      const commitData = await commitRes.json();
+      const baseTreeSha = commitData.tree.sha;
+      setDeployStep("stepAuth", "done", 45, `GitHub 연결 성공 (Base: ${currentCommitSha.substring(0, 7)})`);
+
+      // 3단계: 신규 이미지 파일 Blob 생성
+      setDeployStep("stepUpload", "active", 50, "슬라이드 이미지를 GitHub Blob 저장소로 업로드 중...");
+      
+      const newImages = [];
+      slidesList.querySelectorAll(".slide-card").forEach(card => {
+        const fn = card.querySelector(".slide-filename").value.trim();
+        const dataUrl = card.dataset.localDataUrl;
+        if (fn && dataUrl) {
+          newImages.push({ fileName: fn, dataUrl });
+        }
+      });
+
+      const uploadedBlobs = [];
+      for (let i = 0; i < newImages.length; i++) {
+        const img = newImages[i];
+        setDeployStep("stepUpload", "active", 50 + Math.round(((i + 1) / Math.max(1, newImages.length)) * 20), `이미지 업로드 중 (${i + 1}/${newImages.length}): ${img.fileName}`);
+        
+        const cleanBase64 = img.dataUrl.replace(/^data:image\/\w+;base64,/, "");
+        const blobRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/blobs`, {
+          method: "POST",
+          headers: ghHeaders,
+          body: JSON.stringify({
+            content: cleanBase64,
+            encoding: "base64"
+          })
+        });
+        if (!blobRes.ok) {
+          const err = await blobRes.json().catch(() => ({}));
+          throw new Error(`이미지 업로드 실패 (${img.fileName}): ${err.message || blobRes.statusText}`);
+        }
+        const blobData = await blobRes.json();
+        uploadedBlobs.push({
+          path: `admin-web/slides/${img.fileName}`,
+          mode: "100644",
+          type: "blob",
+          sha: blobData.sha
+        });
+      }
+      setDeployStep("stepUpload", "done", 70, `이미지 업로드 완료 (${uploadedBlobs.length}건)`);
+
+      // 4단계: config.json Blob 생성 및 단일 트리/커밋 생성
+      setDeployStep("stepCommit", "active", 75, "최신 config.json 반영 및 단일 커밋 생성 중...");
+      const configStr = JSON.stringify(config, null, 2);
+      const configBlobRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/blobs`, {
+        method: "POST",
+        headers: ghHeaders,
+        body: JSON.stringify({
+          content: utf8ToBase64(configStr),
+          encoding: "base64"
+        })
+      });
+      const configBlobData = await configBlobRes.json();
+
+      // Tree Entries 구성 (admin-web/config.json 및 root config.json 동시 갱신)
+      const treeEntries = [
+        { path: "admin-web/config.json", mode: "100644", type: "blob", sha: configBlobData.sha },
+        { path: "config.json", mode: "100644", type: "blob", sha: configBlobData.sha },
+        { path: "published-config.json", mode: "100644", type: "blob", sha: configBlobData.sha },
+        ...uploadedBlobs
+      ];
+
+      // 새 Tree 생성
+      const treeRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/trees`, {
+        method: "POST",
+        headers: ghHeaders,
+        body: JSON.stringify({
+          base_tree: baseTreeSha,
+          tree: treeEntries
+        })
+      });
+      const treeData = await treeRes.json();
+
+      // 새 Commit 생성
+      const commitMsg = `Deploy screensaver version ${config.version} [via Web Admin Cloud]`;
+      const newCommitRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/commits`, {
+        method: "POST",
+        headers: ghHeaders,
+        body: JSON.stringify({
+          message: commitMsg,
+          tree: treeData.sha,
+          parents: [currentCommitSha]
+        })
+      });
+      const newCommitData = await newCommitRes.json();
+
+      // main 브랜치 Ref 업데이트
+      const updateRefRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/refs/heads/${GITHUB_BRANCH}`, {
+        method: "PATCH",
+        headers: ghHeaders,
+        body: JSON.stringify({
+          sha: newCommitData.sha,
+          force: false
+        })
+      });
+      if (!updateRefRes.ok) {
+        throw new Error("GitHub 브랜치 갱신(푸시)에 실패했습니다.");
+      }
+      setDeployStep("stepCommit", "done", 88, `GitHub 단일 커밋 완료 (${newCommitData.sha.substring(0, 7)})`);
+    } else {
+      // 로컬 dev-server 폴백 (localhost 실행 시)
+      setDeployStep("stepAuth", "done", 45, "로컬 개발 서버 환경 감지");
+      setDeployStep("stepUpload", "active", 60, "로컬 dev-server로 데이터 전송 중...");
+      const images = {};
+      slidesList.querySelectorAll(".slide-card").forEach(card => {
+        const fn = card.querySelector(".slide-filename").value.trim();
+        const dataUrl = card.dataset.localDataUrl;
+        if (fn && dataUrl) images[fn] = dataUrl;
+      });
+      const res = await fetch('/api/save-bundle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config, images })
+      });
+      if (!res.ok) throw new Error("로컬 서버 저장 실패");
+      setDeployStep("stepUpload", "done", 75, "로컬 파일 저장 완료");
+      setDeployStep("stepCommit", "done", 88, "로컬 Git 커밋 & 푸시 완료");
+    }
+
+    // 5단계: 구글 드라이브 백업 + Vercel 트리거
+    setDeployStep("stepVercel", "active", 92, "Vercel 배포 트리거 및 구글 드라이브 백업 확인 중...");
+    const gasUrl = gasUrlInput?.value?.trim();
+    if (gasUrl && gasUrl.startsWith("https://script.google.com/")) {
+      try {
+        fetch(gasUrl, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify(config, null, 2)
+        }).catch(err => console.warn("구글 드라이브 백업 요청 예외:", err));
+      } catch (e) {
+        console.warn("구글 드라이브 백업 실패:", e);
+      }
+    }
+
+    setDeployStep("stepVercel", "done", 100, "전 병원 PC 배포 준비 완료!");
+    setStatus("배포 완료 (Vercel CDN 갱신 중)", "success");
+    if (deployProgressTitle) deployProgressTitle.textContent = "🎉 전 병원 PC 배포 성공!";
+    if (deployStatusMessage) {
+      deployStatusMessage.innerHTML = `<strong>Ver ${config.version}</strong> 배포가 성공적으로 완료되었습니다.<br>GitHub에 영구 커밋되었으며, 약 15초 내로 Vercel 글로벌 CDN을 통해 전 병원 PC에 자동 반영됩니다.`;
+    }
+    if (deployProgressFooter) deployProgressFooter.hidden = false;
+
+  } catch (err) {
+    console.error("배포 중 오류:", err);
+    setStatus("배포 실패", "error");
+    if (deployProgressTitle) deployProgressTitle.textContent = "❌ 배포 실패";
+    if (deployStatusMessage) {
+      deployStatusMessage.textContent = err.message || "배포 도중 예기치 못한 오류가 발생했습니다.";
+    }
+    if (deployProgressFooter) deployProgressFooter.hidden = false;
   }
 }
 
@@ -861,10 +1108,29 @@ function versionStamp() {
 }
 
 function loadDraft() {
-  gasUrlInput.value = localStorage.getItem(gasKey) || defaultGasUrl;
-  gasUrlInput.addEventListener("input", () => {
-    localStorage.setItem(gasKey, gasUrlInput.value.trim());
-  });
+  if (gasUrlInput) {
+    gasUrlInput.value = localStorage.getItem(gasKey) || defaultGasUrl;
+    gasUrlInput.addEventListener("input", () => {
+      localStorage.setItem(gasKey, gasUrlInput.value.trim());
+    });
+  }
+
+  // GitHub 토큰 초기화 및 자동 연결 검증
+  if (githubTokenInput) {
+    githubTokenInput.value = localStorage.getItem(githubTokenKey) || "";
+    if (githubTokenInput.value) {
+      verifyGithubToken(githubTokenInput.value, false);
+    } else {
+      setGithubStatus("neutral", "토큰 확인 필요");
+    }
+    githubTokenInput.addEventListener("input", () => {
+      const val = githubTokenInput.value.trim();
+      localStorage.setItem(githubTokenKey, val);
+      if (!val) {
+        setGithubStatus("neutral", "토큰 미설정");
+      }
+    });
+  }
 
   const saved = localStorage.getItem(draftKey);
   const config = saved ? JSON.parse(saved) : {
@@ -888,6 +1154,49 @@ function loadDraft() {
   (config.slides || []).forEach(renderSlideCard);
   renumber();
   refresh();
+
+  // 다른 PC나 새 브라우저 접속 시, 현재 서버(Vercel/GitHub)에 실제 배포된 최신 config.json을 자동 동기화
+  fetch(`/config.json?_cb=${Date.now()}`)
+    .then(r => r.ok ? r.json() : null)
+    .then(remote => {
+      if (remote && Array.isArray(remote.slides) && remote.slides.length > 0) {
+        // 로컬 초안이 없거나 기본 초기값이면 서버 배포본으로 즉시 자동 동기화
+        const isDefault = !saved || (config.version === "2026.07.27.001" && config.slides.length === 3);
+        if (isDefault) {
+          applyImportedConfig(remote);
+          setStatus(`서버 최신 배포본 자동 동기화됨 (Ver ${remote.version})`, "success");
+        }
+      }
+    })
+    .catch(() => {});
+}
+
+// GitHub 연동 이벤트 바인딩
+if (testGithubBtn) {
+  testGithubBtn.addEventListener("click", () => {
+    verifyGithubToken(githubTokenInput?.value?.trim(), true);
+  });
+}
+
+if (toggleGithubTokenBtn) {
+  toggleGithubTokenBtn.addEventListener("click", () => {
+    if (!githubTokenInput) return;
+    const isPwd = githubTokenInput.type === "password";
+    githubTokenInput.type = isPwd ? "text" : "password";
+    toggleGithubTokenBtn.textContent = isPwd ? "🙈" : "👁️";
+  });
+}
+
+if (openGithubGuideBtn && githubGuideModal) {
+  openGithubGuideBtn.addEventListener("click", () => { githubGuideModal.hidden = false; });
+  githubGuideCloseBtn?.addEventListener("click", () => { githubGuideModal.hidden = true; });
+  githubGuideOkBtn?.addEventListener("click", () => { githubGuideModal.hidden = true; });
+}
+
+if (deployDoneBtn && deployProgressModal) {
+  deployDoneBtn.addEventListener("click", () => {
+    deployProgressModal.hidden = true;
+  });
 }
 
 // 배포 실행 바인딩

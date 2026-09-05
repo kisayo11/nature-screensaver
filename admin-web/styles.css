@@ -1505,3 +1505,179 @@ input:focus, textarea:focus {
   gap: 16px;
 }
 
+/* ==========================================================================
+   GitHub 연동 배너 & 모달 스타일
+   ========================================================================== */
+.github-banner {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #cbd5e1;
+}
+
+.github-badge {
+  background: #24292f;
+  color: #ffffff;
+}
+
+.gas-banner {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1px solid var(--primary-border);
+}
+
+.gas-badge {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.banner-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.status-chip.neutral {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.status-chip.success {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.status-chip.error {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.status-chip.loading {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.github-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 520px;
+}
+
+.github-token-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.github-token-wrap input {
+  padding-right: 36px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.btn-token-eye {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 14px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.btn-token-eye:hover {
+  opacity: 1;
+}
+
+/* 배포 진행 상태 모달 */
+.deploy-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0 20px;
+}
+
+.deploy-step-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface-muted);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-sub);
+  transition: all 0.2s ease;
+}
+
+.deploy-step-item.active {
+  background: #f0fdf4;
+  border-color: var(--primary-border);
+  color: var(--primary-hover);
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
+.deploy-step-item.done {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.deploy-step-item.error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.step-status-icon {
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.deploy-progress-bar-wrap {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.deploy-progress-bar {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.deploy-status-subtext {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  font-weight: 500;
+}
+
+

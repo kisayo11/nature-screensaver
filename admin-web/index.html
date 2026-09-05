@@ -168,10 +168,30 @@
           </div>
         </div>
 
-        <!-- 구글 드라이브 백업 연동 배너 (하단 배치, 선택사항) -->
-        <div class="integration-banner">
+        <!-- GitHub API 원격 배포 연동 배너 (핵심 배포 수단) -->
+        <div class="integration-banner github-banner">
           <div class="banner-info">
-            <span class="badge-tag">선택사항 (백업용)</span>
+            <div class="banner-badge-row">
+              <span class="badge-tag github-badge">⭐ 클라우드 원격 배포</span>
+              <span id="githubStatusBadge" class="status-chip neutral">토큰 확인 필요</span>
+            </div>
+            <strong>GitHub API 직접 연동 (원클릭 클라우드 배포)</strong>
+            <p>어느 PC나 모바일에서 접속하든 GitHub 저장소에 사진을 자동 커밋하고 Vercel 배포를 100% 웹에서 완료합니다.</p>
+          </div>
+          <div class="banner-controls github-controls">
+            <div class="github-token-wrap">
+              <input id="githubToken" type="password" placeholder="ghp_... (GitHub Personal Access Token)" spellcheck="false" autocomplete="off" />
+              <button id="toggleGithubToken" type="button" class="btn-token-eye" title="토큰 표시/숨김">👁️</button>
+            </div>
+            <button id="testGithubBtn" type="button" class="btn btn-secondary btn-sm">⚡ 연결 테스트</button>
+            <button id="openGithubGuide" type="button" class="btn btn-primary btn-sm">📖 1분 토큰 발급 가이드</button>
+          </div>
+        </div>
+
+        <!-- 구글 드라이브 백업 연동 배너 (하단 배치, 선택사항) -->
+        <div class="integration-banner gas-banner">
+          <div class="banner-info">
+            <span class="badge-tag gas-badge">선택사항 (백업용)</span>
             <strong>구글 드라이브 자동 백업 연동</strong>
             <p>신규 인스톨러는 Vercel을 직접 바라보므로 필수가 아닙니다. 구글 드라이브에도 백업본을 남기고 싶으실 때만 연동 URL을 입력하시면 됩니다.</p>
           </div>
@@ -486,6 +506,98 @@
       <div class="modal-footer">
         <button id="pwdCancel" type="button" class="btn btn-secondary">취소</button>
         <button id="pwdSave" type="button" class="btn btn-primary">비밀번호 저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GitHub 토큰 발급 가이드 모달 -->
+  <div id="githubGuideModal" class="modal-overlay" hidden>
+    <div class="modal-card wide">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">🐙</span>
+          <h3>GitHub API 연동 토큰(PAT) 1분 발급 가이드</h3>
+        </div>
+        <button id="githubGuideClose" type="button" class="icon-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="guide-intro">
+          <p>어느 PC나 태블릿에서든 웹 브라우저만으로 사진을 저장하고 전 병원에 배포할 수 있도록 GitHub 접근 토큰을 발급받아 등록하는 방법입니다. (최초 1회만 등록하면 계속 유지됩니다.)</p>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-badge">1단계</div>
+          <h4>GitHub 토큰 자동 생성 페이지 열기</h4>
+          <p>아래 버튼을 누르면 <strong><code>repo</code> 권한이 자동 체크된 토큰 생성 페이지</strong>가 새 탭으로 바로 열립니다. (GitHub 로그인이 필요합니다.)</p>
+          <div style="margin-top: 10px;">
+            <a href="https://github.com/settings/tokens/new?description=nature-screensaver-admin&scopes=repo" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none;">
+              🚀 GitHub 토큰 생성 페이지 바로가기 ↗
+            </a>
+          </div>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-badge">2단계</div>
+          <h4>옵션 확인 및 토큰 발급</h4>
+          <p>
+            • <strong>Note (이름)</strong>: <code>nature-screensaver-admin</code> 자동 입력됨<br>
+            • <strong>Expiration (유효기간)</strong>: <code>No expiration</code> (만료 없음 권장)<br>
+            • <strong>Select scopes</strong>: 맨 위의 <strong><code>repo</code></strong> (Full control of private repositories)가 체크되어 있는지 확인<br>
+            • 화면 맨 아래의 초록색 <strong>[Generate token]</strong> 버튼을 클릭합니다.
+          </p>
+        </div>
+
+        <div class="guide-step">
+          <div class="step-badge">3단계</div>
+          <h4>토큰 복사 및 관리자 웹에 등록</h4>
+          <p>화면에 생성된 <code>ghp_...</code> 로 시작하는 토큰 문자열을 복사한 뒤, 관리자 웹 상단의 <strong>GitHub API 토큰</strong> 칸에 붙여넣고 <strong>[⚡ 연결 테스트]</strong>를 누르시면 완료됩니다!</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="githubGuideOk" type="button" class="btn btn-primary">확인 완료</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 배포 진행 상태 모달 -->
+  <div id="deployProgressModal" class="modal-overlay" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">🚀</span>
+          <h3 id="deployProgressTitle">전 병원 PC 배포 진행 중</h3>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="deploy-steps-list">
+          <div class="deploy-step-item" id="stepCheck">
+            <span class="step-status-icon">⏳</span>
+            <span class="step-text">1. 슬라이드 및 버전 유효성 검사</span>
+          </div>
+          <div class="deploy-step-item" id="stepAuth">
+            <span class="step-status-icon">⏳</span>
+            <span class="step-text">2. GitHub 원격 저장소 인증 및 권한 확인</span>
+          </div>
+          <div class="deploy-step-item" id="stepUpload">
+            <span class="step-status-icon">⏳</span>
+            <span class="step-text">3. 신규 슬라이드 이미지 GitHub 저장소 업로드</span>
+          </div>
+          <div class="deploy-step-item" id="stepCommit">
+            <span class="step-status-icon">⏳</span>
+            <span class="step-text">4. 버전 단일 커밋 생성 및 GitHub 푸시</span>
+          </div>
+          <div class="deploy-step-item" id="stepVercel">
+            <span class="step-status-icon">⏳</span>
+            <span class="step-text">5. Vercel 글로벌 CDN 배포 트리거 및 백업 완료</span>
+          </div>
+        </div>
+        <div class="deploy-progress-bar-wrap">
+          <div id="deployProgressBar" class="deploy-progress-bar"></div>
+        </div>
+        <p id="deployStatusMessage" class="deploy-status-subtext">배포를 준비하고 있습니다...</p>
+      </div>
+      <div class="modal-footer" id="deployProgressFooter" hidden>
+        <button id="deployDoneBtn" type="button" class="btn btn-primary">확인</button>
       </div>
     </div>
   </div>
