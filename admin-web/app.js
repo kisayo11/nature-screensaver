@@ -309,9 +309,15 @@ function renderSlideCard(data = {}) {
         </div>
       </div>
 
-      <div class="input-sm-wrap">
-        <label>슬라이드 이미지 주소 (URL 또는 파일명)</label>
-        <input class="slide-url" value="${esc(data.url ?? "")}" placeholder="${text.drivePlaceholder}" spellcheck="false" />
+      <div class="field-row">
+        <div class="input-sm-wrap" style="flex: 2;">
+          <label>슬라이드 이미지 주소 (URL 또는 파일명)</label>
+          <input class="slide-url" value="${esc(data.url ?? "")}" placeholder="${text.drivePlaceholder}" spellcheck="false" />
+        </div>
+        <div class="input-sm-wrap" style="flex: 1; min-width: 120px;">
+          <label>개별 노출시간(초)</label>
+          <input type="number" class="slide-duration" min="3" placeholder="기본값(설정)" value="${data.durationSeconds ? data.durationSeconds : ""}" />
+        </div>
       </div>
     </div>
 
@@ -567,6 +573,8 @@ function collect() {
     let rawUrl = card.querySelector(".slide-url").value.trim();
     const isLocal = Boolean(card.dataset.localDataUrl);
     const fileName = card.querySelector(".slide-filename").value.trim();
+    const durInput = card.querySelector(".slide-duration");
+    const durVal = durInput && durInput.value.trim() ? Number(durInput.value) : undefined;
 
     // 로컬에서 업로드된 이미지인 경우 자동으로 Vercel /slides/ 주소 자동 완성!
     if (isLocal && (!rawUrl || !rawUrl.startsWith("https://drive.google.com/"))) {
@@ -574,20 +582,26 @@ function collect() {
       card.querySelector(".slide-url").value = rawUrl;
     }
 
-    return {
+    const slideObj = {
       order: Number(card.querySelector(".order-input").value || 0),
       title: card.querySelector(".slide-title").value.trim(),
       fileName: fileName,
       url: isLocal ? rawUrl : driveDownloadUrl(rawUrl)
     };
+    if (durVal && durVal >= 3) {
+      slideObj.durationSeconds = durVal;
+    }
+    return slideObj;
   }).filter(s => s.fileName || s.url || s.title).sort((a, b) => a.order - b.order);
 
   const duration = Number(document.querySelector("#duration").value || 20);
   const interval = Number(document.querySelector("#interval").value || 60);
   const version = document.querySelector("#version").value.trim();
   const notice = document.querySelector("#notice").value.trim();
+  const dDayTitle = document.querySelector("#dDayTitle")?.value.trim() || undefined;
+  const dDayDate = document.querySelector("#dDayDate")?.value.trim() || undefined;
 
-  return {
+  const res = {
     version,
     updateIntervalMinutes: interval,
     slideDurationSeconds: duration,
@@ -596,6 +610,9 @@ function collect() {
     notice,
     slides
   };
+  if (dDayTitle) res.dDayTitle = dDayTitle;
+  if (dDayDate) res.dDayDate = dDayDate;
+  return res;
 }
 
 function formatDuration(totalSeconds) {
@@ -617,7 +634,7 @@ function validate(config) {
   const names = new Set();
   for (const slide of config.slides) {
     if (!Number.isInteger(slide.order) || slide.order < 1) errors.push("슬라이드 순서를 확인하세요.");
-    if (!/\.(png|jpe?g)$/i.test(slide.fileName)) errors.push(`${slide.fileName || "fileName"}: 파일명이 .png 또는 .jpg 로 끝나야 합니다.`);
+    if (!/\.(png|jpe?g|webp)$/i.test(slide.fileName)) errors.push(`${slide.fileName || "fileName"}: 파일명이 .png, .jpg, 또는 .webp 로 끝나야 합니다.`);
     if (names.has(slide.fileName)) errors.push(`${slide.fileName}: 파일명이 중복됩니다.`);
     names.add(slide.fileName);
     if (isDriveFolderUrl(slide.url)) errors.push(`${slide.fileName}: ${text.folderWarning}`);
@@ -629,10 +646,10 @@ function refresh() {
   const config = collect();
   localStorage.setItem(draftKey, JSON.stringify(config));
 
-  // KPI 업데이트
+  // KPI 업데이트 (개별 슬라이드 노출시간 반영)
   const count = config.slides.length;
   const duration = config.slideDurationSeconds;
-  const cycleSeconds = count * duration;
+  const cycleSeconds = config.slides.reduce((acc, s) => acc + (s.durationSeconds || duration), 0);
 
   if (kpiSlideCount) kpiSlideCount.innerHTML = `${count}<span class="kpi-unit">장</span>`;
   if (kpiCycleTime) {
@@ -761,157 +778,171 @@ async function executeDeploy() {
     localStorage.setItem(draftKey, JSON.stringify(config));
     setDeployStep("stepCheck", "done", 25, "슬라이드 유효성 검사 완료");
 
-    // 2단계: GitHub 인증 및 권한 확인
-    setDeployStep("stepAuth", "active", 35, "GitHub 저장소(Private) 연결 상태를 확인하고 있습니다...");
+    // 이미지 맵 추출
+    const imagesMap = {};
+    slidesList.querySelectorAll(".slide-card").forEach(card => {
+      const fn = card.querySelector(".slide-filename").value.trim();
+      const dataUrl = card.dataset.localDataUrl;
+      if (fn && dataUrl) imagesMap[fn] = dataUrl;
+    });
+
     const token = (githubTokenInput?.value || localStorage.getItem(githubTokenKey) || "").trim();
 
-    // 로컬 dev-server 환경 감지
-    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-    let useGithubApi = Boolean(token);
-
-    if (!useGithubApi && !isLocalhost) {
-      setDeployStep("stepAuth", "error", 35, "GitHub 토큰이 등록되어 있지 않습니다.");
-      throw new Error("GitHub 개인 접근 토큰(PAT)이 등록되지 않았습니다. 상단 [1분 토큰 발급 가이드]를 참고하여 토큰을 입력해 주세요.");
+    // 2단계: Vercel Serverless /api/deploy 우선 호출 (토큰 서버사이드 은닉 및 일괄 트랜잭션)
+    setDeployStep("stepAuth", "active", 35, "배포 서버 연결 상태를 확인하고 있습니다...");
+    let serverlessSuccess = false;
+    try {
+      const serverlessRes = await fetch('/api/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config, images: imagesMap, token })
+      });
+      if (serverlessRes.ok) {
+        const sJson = await serverlessRes.json();
+        setDeployStep("stepAuth", "done", 45, "배포 권한 인증 완료 (서버리스)");
+        setDeployStep("stepUpload", "done", 70, `슬라이드 이미지 반영 완료 (${sJson.uploadedImages ?? Object.keys(imagesMap).length}건)`);
+        setDeployStep("stepCommit", "done", 88, `단일 커밋 & 푸시 완료 (${(sJson.commitSha || "").substring(0, 7)})`);
+        serverlessSuccess = true;
+      }
+    } catch (sErr) {
+      console.warn("서버리스 배포 통신 스킵 -> 브라우저 직접 호출로 폴백:", sErr.message);
     }
 
-    if (useGithubApi) {
-      const ghHeaders = {
-        "Accept": "application/vnd.github.v3+json",
-        "Authorization": `Bearer ${token}`
-      };
+    if (!serverlessSuccess) {
+      // 로컬 dev-server 또는 브라우저 직접 호출 폴백
+      const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      let useGithubApi = Boolean(token);
 
-      // 2-1: repo 및 main 브랜치 HEAD 조회
-      const refRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/ref/heads/${GITHUB_BRANCH}`, { headers: ghHeaders });
-      if (!refRes.ok) {
-        setDeployStep("stepAuth", "error", 35, "GitHub 인증에 실패했습니다.");
-        const errJson = await refRes.json().catch(() => ({}));
-        throw new Error(`GitHub 인증 실패: ${errJson.message || refRes.statusText} (토큰의 repo 권한을 확인하세요)`);
+      if (!useGithubApi && !isLocalhost) {
+        setDeployStep("stepAuth", "error", 35, "GitHub 토큰이 등록되어 있지 않습니다.");
+        throw new Error("GitHub 개인 접근 토큰(PAT)이 등록되지 않았습니다. 상단 [1분 토큰 발급 가이드]를 참고하여 토큰을 입력해 주세요.");
       }
-      const refData = await refRes.json();
-      const currentCommitSha = refData.object.sha;
 
-      // 2-2: 최신 커밋의 Tree SHA 조회
-      const commitRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/commits/${currentCommitSha}`, { headers: ghHeaders });
-      const commitData = await commitRes.json();
-      const baseTreeSha = commitData.tree.sha;
-      setDeployStep("stepAuth", "done", 45, `GitHub 연결 성공 (Base: ${currentCommitSha.substring(0, 7)})`);
+      if (useGithubApi) {
+        const ghHeaders = {
+          "Accept": "application/vnd.github.v3+json",
+          "Authorization": `Bearer ${token}`
+        };
 
-      // 3단계: 신규 이미지 파일 Blob 생성
-      setDeployStep("stepUpload", "active", 50, "슬라이드 이미지를 GitHub Blob 저장소로 업로드 중...");
-      
-      const newImages = [];
-      slidesList.querySelectorAll(".slide-card").forEach(card => {
-        const fn = card.querySelector(".slide-filename").value.trim();
-        const dataUrl = card.dataset.localDataUrl;
-        if (fn && dataUrl) {
-          newImages.push({ fileName: fn, dataUrl });
+        // 2-1: repo 및 main 브랜치 HEAD 조회
+        const refRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/ref/heads/${GITHUB_BRANCH}`, { headers: ghHeaders });
+        if (!refRes.ok) {
+          setDeployStep("stepAuth", "error", 35, "GitHub 인증에 실패했습니다.");
+          const errJson = await refRes.json().catch(() => ({}));
+          throw new Error(`GitHub 인증 실패: ${errJson.message || refRes.statusText} (토큰의 repo 권한을 확인하세요)`);
         }
-      });
+        const refData = await refRes.json();
+        const currentCommitSha = refData.object.sha;
 
-      const uploadedBlobs = [];
-      for (let i = 0; i < newImages.length; i++) {
-        const img = newImages[i];
-        setDeployStep("stepUpload", "active", 50 + Math.round(((i + 1) / Math.max(1, newImages.length)) * 20), `이미지 업로드 중 (${i + 1}/${newImages.length}): ${img.fileName}`);
+        // 2-2: 최신 커밋의 Tree SHA 조회
+        const commitRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/commits/${currentCommitSha}`, { headers: ghHeaders });
+        const commitData = await commitRes.json();
+        const baseTreeSha = commitData.tree.sha;
+        setDeployStep("stepAuth", "done", 45, `GitHub 연결 성공 (Base: ${currentCommitSha.substring(0, 7)})`);
+
+        // 3단계: 신규 이미지 파일 Blob 생성
+        setDeployStep("stepUpload", "active", 50, "슬라이드 이미지를 GitHub Blob 저장소로 업로드 중...");
         
-        const cleanBase64 = img.dataUrl.replace(/^data:image\/\w+;base64,/, "");
-        const blobRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/blobs`, {
+        const newImages = Object.entries(imagesMap).map(([fileName, dataUrl]) => ({ fileName, dataUrl }));
+        const uploadedBlobs = [];
+        for (let i = 0; i < newImages.length; i++) {
+          const img = newImages[i];
+          setDeployStep("stepUpload", "active", 50 + Math.round(((i + 1) / Math.max(1, newImages.length)) * 20), `이미지 업로드 중 (${i + 1}/${newImages.length}): ${img.fileName}`);
+          
+          const cleanBase64 = img.dataUrl.replace(/^data:image\/\w+;base64,/, "");
+          const blobRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/blobs`, {
+            method: "POST",
+            headers: ghHeaders,
+            body: JSON.stringify({
+              content: cleanBase64,
+              encoding: "base64"
+            })
+          });
+          if (!blobRes.ok) {
+            const err = await blobRes.json().catch(() => ({}));
+            throw new Error(`이미지 업로드 실패 (${img.fileName}): ${err.message || blobRes.statusText}`);
+          }
+          const blobData = await blobRes.json();
+          uploadedBlobs.push({
+            path: `admin-web/slides/${img.fileName}`,
+            mode: "100644",
+            type: "blob",
+            sha: blobData.sha
+          });
+        }
+        setDeployStep("stepUpload", "done", 70, `이미지 업로드 완료 (${uploadedBlobs.length}건)`);
+
+        // 4단계: config.json Blob 생성 및 단일 트리/커밋 생성
+        setDeployStep("stepCommit", "active", 75, "최신 config.json 반영 및 단일 커밋 생성 중...");
+        const configStr = JSON.stringify(config, null, 2);
+        const configBlobRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/blobs`, {
           method: "POST",
           headers: ghHeaders,
           body: JSON.stringify({
-            content: cleanBase64,
+            content: utf8ToBase64(configStr),
             encoding: "base64"
           })
         });
-        if (!blobRes.ok) {
-          const err = await blobRes.json().catch(() => ({}));
-          throw new Error(`이미지 업로드 실패 (${img.fileName}): ${err.message || blobRes.statusText}`);
-        }
-        const blobData = await blobRes.json();
-        uploadedBlobs.push({
-          path: `admin-web/slides/${img.fileName}`,
-          mode: "100644",
-          type: "blob",
-          sha: blobData.sha
+        const configBlobData = await configBlobRes.json();
+
+        // Tree Entries 구성 (admin-web/config.json 및 root config.json 동시 갱신)
+        const treeEntries = [
+          { path: "admin-web/config.json", mode: "100644", type: "blob", sha: configBlobData.sha },
+          { path: "config.json", mode: "100644", type: "blob", sha: configBlobData.sha },
+          { path: "published-config.json", mode: "100644", type: "blob", sha: configBlobData.sha },
+          ...uploadedBlobs
+        ];
+
+        // 새 Tree 생성
+        const treeRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/trees`, {
+          method: "POST",
+          headers: ghHeaders,
+          body: JSON.stringify({
+            base_tree: baseTreeSha,
+            tree: treeEntries
+          })
         });
+        const treeData = await treeRes.json();
+
+        // 새 Commit 생성
+        const commitMsg = `Deploy screensaver version ${config.version} [via Web Admin Cloud]`;
+        const newCommitRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/commits`, {
+          method: "POST",
+          headers: ghHeaders,
+          body: JSON.stringify({
+            message: commitMsg,
+            tree: treeData.sha,
+            parents: [currentCommitSha]
+          })
+        });
+        const newCommitData = await newCommitRes.json();
+
+        // main 브랜치 Ref 업데이트
+        const updateRefRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/refs/heads/${GITHUB_BRANCH}`, {
+          method: "PATCH",
+          headers: ghHeaders,
+          body: JSON.stringify({
+            sha: newCommitData.sha,
+            force: false
+          })
+        });
+        if (!updateRefRes.ok) {
+          throw new Error("GitHub 브랜치 갱신(푸시)에 실패했습니다.");
+        }
+        setDeployStep("stepCommit", "done", 88, `GitHub 단일 커밋 완료 (${newCommitData.sha.substring(0, 7)})`);
+      } else {
+        // 로컬 dev-server 폴백 (localhost 실행 시)
+        setDeployStep("stepAuth", "done", 45, "로컬 개발 서버 환경 감지");
+        setDeployStep("stepUpload", "active", 60, "로컬 dev-server로 데이터 전송 중...");
+        const res = await fetch('/api/save-bundle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config, images: imagesMap })
+        });
+        if (!res.ok) throw new Error("로컬 서버 저장 실패");
+        setDeployStep("stepUpload", "done", 75, "로컬 파일 저장 완료");
+        setDeployStep("stepCommit", "done", 88, "로컬 Git 커밋 & 푸시 완료");
       }
-      setDeployStep("stepUpload", "done", 70, `이미지 업로드 완료 (${uploadedBlobs.length}건)`);
-
-      // 4단계: config.json Blob 생성 및 단일 트리/커밋 생성
-      setDeployStep("stepCommit", "active", 75, "최신 config.json 반영 및 단일 커밋 생성 중...");
-      const configStr = JSON.stringify(config, null, 2);
-      const configBlobRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/blobs`, {
-        method: "POST",
-        headers: ghHeaders,
-        body: JSON.stringify({
-          content: utf8ToBase64(configStr),
-          encoding: "base64"
-        })
-      });
-      const configBlobData = await configBlobRes.json();
-
-      // Tree Entries 구성 (admin-web/config.json 및 root config.json 동시 갱신)
-      const treeEntries = [
-        { path: "admin-web/config.json", mode: "100644", type: "blob", sha: configBlobData.sha },
-        { path: "config.json", mode: "100644", type: "blob", sha: configBlobData.sha },
-        { path: "published-config.json", mode: "100644", type: "blob", sha: configBlobData.sha },
-        ...uploadedBlobs
-      ];
-
-      // 새 Tree 생성
-      const treeRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/trees`, {
-        method: "POST",
-        headers: ghHeaders,
-        body: JSON.stringify({
-          base_tree: baseTreeSha,
-          tree: treeEntries
-        })
-      });
-      const treeData = await treeRes.json();
-
-      // 새 Commit 생성
-      const commitMsg = `Deploy screensaver version ${config.version} [via Web Admin Cloud]`;
-      const newCommitRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/commits`, {
-        method: "POST",
-        headers: ghHeaders,
-        body: JSON.stringify({
-          message: commitMsg,
-          tree: treeData.sha,
-          parents: [currentCommitSha]
-        })
-      });
-      const newCommitData = await newCommitRes.json();
-
-      // main 브랜치 Ref 업데이트
-      const updateRefRes = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/refs/heads/${GITHUB_BRANCH}`, {
-        method: "PATCH",
-        headers: ghHeaders,
-        body: JSON.stringify({
-          sha: newCommitData.sha,
-          force: false
-        })
-      });
-      if (!updateRefRes.ok) {
-        throw new Error("GitHub 브랜치 갱신(푸시)에 실패했습니다.");
-      }
-      setDeployStep("stepCommit", "done", 88, `GitHub 단일 커밋 완료 (${newCommitData.sha.substring(0, 7)})`);
-    } else {
-      // 로컬 dev-server 폴백 (localhost 실행 시)
-      setDeployStep("stepAuth", "done", 45, "로컬 개발 서버 환경 감지");
-      setDeployStep("stepUpload", "active", 60, "로컬 dev-server로 데이터 전송 중...");
-      const images = {};
-      slidesList.querySelectorAll(".slide-card").forEach(card => {
-        const fn = card.querySelector(".slide-filename").value.trim();
-        const dataUrl = card.dataset.localDataUrl;
-        if (fn && dataUrl) images[fn] = dataUrl;
-      });
-      const res = await fetch('/api/save-bundle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config, images })
-      });
-      if (!res.ok) throw new Error("로컬 서버 저장 실패");
-      setDeployStep("stepUpload", "done", 75, "로컬 파일 저장 완료");
-      setDeployStep("stepCommit", "done", 88, "로컬 Git 커밋 & 푸시 완료");
     }
 
     // 5단계: Vercel 배포 트리거 완료
@@ -948,6 +979,8 @@ function applyImportedConfig(config) {
   if (config.updateIntervalMinutes) document.querySelector("#interval").value = config.updateIntervalMinutes;
   if (config.slideDurationSeconds) document.querySelector("#duration").value = config.slideDurationSeconds;
   if (config.notice !== undefined) document.querySelector("#notice").value = config.notice;
+  if (config.dDayTitle !== undefined && document.querySelector("#dDayTitle")) document.querySelector("#dDayTitle").value = config.dDayTitle;
+  if (config.dDayDate !== undefined && document.querySelector("#dDayDate")) document.querySelector("#dDayDate").value = config.dDayDate;
 
   if (Array.isArray(config.slides)) {
     slidesList.innerHTML = "";
@@ -1051,14 +1084,21 @@ function startSimTimer() {
   stopSimTimer();
   simPlaying = true;
   simToggle.textContent = "⏸ 일시정지";
-  const durationSec = Number(document.querySelector("#duration").value || 20);
-  simTimer = setInterval(nextSimSlide, Math.max(3, Math.min(durationSec, 10)) * 1000);
+  const current = simSlides[simIndex];
+  const baseDuration = Number(document.querySelector("#duration").value || 20);
+  const slideDuration = current?.durationSeconds || baseDuration;
+  // 시뮬레이터에서는 최대 8초 정도로 쾌적하게 미리보기 지원
+  const simSeconds = Math.max(3, Math.min(slideDuration, 8));
+  simTimer = setTimeout(() => {
+    nextSimSlide();
+    if (simPlaying) startSimTimer();
+  }, simSeconds * 1000);
 }
 
 function stopSimTimer() {
   simPlaying = false;
   simToggle.textContent = "▶ 재생";
-  if (simTimer) clearInterval(simTimer);
+  if (simTimer) clearTimeout(simTimer);
   simTimer = null;
 }
 
@@ -1069,7 +1109,20 @@ function openSimulator() {
     return;
   }
   simSlides = config.slides;
-  simNotice.textContent = config.notice || "";
+  
+  let noticeStr = config.notice || "";
+  if (config.dDayDate) {
+    const target = new Date(config.dDayDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    target.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((target - today) / (1000 * 60 * 60 * 24));
+    const ddayBadge = diffDays === 0 ? "D-Day" : (diffDays > 0 ? `D-${diffDays}` : `D+${Math.abs(diffDays)}`);
+    const title = config.dDayTitle ? `[🌿 ${config.dDayTitle} ${ddayBadge}]` : `[🌿 ${ddayBadge}]`;
+    noticeStr = `${title} ${noticeStr}`;
+  }
+
+  simNotice.textContent = noticeStr;
   simulatorModal.hidden = false;
   showSimSlide(0);
   startSimTimer();
@@ -1156,6 +1209,8 @@ function loadDraft() {
   document.querySelector("#interval").value = config.updateIntervalMinutes || 60;
   document.querySelector("#duration").value = config.slideDurationSeconds || 20;
   document.querySelector("#notice").value = config.notice || "";
+  if (config.dDayTitle !== undefined && document.querySelector("#dDayTitle")) document.querySelector("#dDayTitle").value = config.dDayTitle;
+  if (config.dDayDate !== undefined && document.querySelector("#dDayDate")) document.querySelector("#dDayDate").value = config.dDayDate;
 
   slidesList.innerHTML = "";
   (config.slides || []).forEach(renderSlideCard);
@@ -1451,6 +1506,71 @@ function syncPresetChips() {
   document.querySelectorAll("#durationPresets .preset-chip").forEach(chip => {
     chip.classList.toggle("active", chip.dataset.val === String(curDuration));
   });
+}
+
+// D-Day 및 추가 설정 이벤트 리스너
+document.querySelector("#dDayTitle")?.addEventListener("input", refresh);
+document.querySelector("#dDayDate")?.addEventListener("change", refresh);
+
+/* ----------------------------------------------------
+   원내 PC 화면보호기 가동 상태 모니터링 모달
+---------------------------------------------------- */
+const monitoringModal = document.querySelector("#monitoringModal");
+const openMonitoringBtn = document.querySelector("#openMonitoringBtn");
+const monitoringCloseBtn = document.querySelector("#monitoringClose");
+const monitoringOkBtn = document.querySelector("#monitoringOk");
+const refreshMonitoringBtn = document.querySelector("#refreshMonitoringBtn");
+const monitoringTableBody = document.querySelector("#monitoringTableBody");
+const activePcCountBadge = document.querySelector("#activePcCountBadge");
+
+async function loadMonitoringPcs() {
+  if (!monitoringTableBody) return;
+  monitoringTableBody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: var(--text-muted);">원내 PC 신호를 확인하는 중...</td></tr>`;
+  try {
+    const res = await fetch("/api/heartbeat");
+    if (!res.ok) throw new Error("서버 응답 오류 (HTTP " + res.status + ")");
+    const data = await res.json();
+    const pcs = data.pcs || [];
+    if (activePcCountBadge) activePcCountBadge.textContent = `활성 PC: ${pcs.length}대`;
+
+    if (!pcs.length) {
+      monitoringTableBody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: var(--text-muted);">현재 보고된 PC 신호가 없습니다.<br><span style="font-size: 12px;">(병원 PC에서 화면보호기가 1회 이상 실행되면 자동 등록됩니다)</span></td></tr>`;
+      return;
+    }
+
+    monitoringTableBody.innerHTML = pcs.map(p => {
+      const d = new Date(p.lastSeen);
+      const diffMin = Math.round((Date.now() - d.getTime()) / 60000);
+      const timeStr = diffMin <= 1 ? "방금 전" : (diffMin < 60 ? `${diffMin}분 전` : d.toLocaleString());
+      const isOnline = diffMin <= 30;
+      const statusBadge = isOnline 
+        ? `<span class="status-chip success">정상 가동</span>` 
+        : `<span class="status-chip neutral">대기 중</span>`;
+
+      return `
+        <tr style="border-bottom: 1px solid var(--border-color);">
+          <td style="padding: 10px 14px;">${statusBadge}</td>
+          <td style="padding: 10px 14px; font-weight: 600;">💻 ${esc(p.machineName)}</td>
+          <td style="padding: 10px 14px; color: var(--text-muted);">${esc(p.userName || '-')}</td>
+          <td style="padding: 10px 14px;">${p.screenCount || 1}대 모니터</td>
+          <td style="padding: 10px 14px;"><code class="code-font" style="font-size: 11px;">${esc(p.version)}</code></td>
+          <td style="padding: 10px 14px; color: var(--text-muted);">${timeStr}</td>
+        </tr>
+      `;
+    }).join("");
+  } catch (err) {
+    monitoringTableBody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: #ef4444;">PC 신호 조회 실패: ${esc(err.message)}</td></tr>`;
+  }
+}
+
+if (openMonitoringBtn && monitoringModal) {
+  openMonitoringBtn.addEventListener("click", () => {
+    monitoringModal.hidden = false;
+    loadMonitoringPcs();
+  });
+  monitoringCloseBtn?.addEventListener("click", () => { monitoringModal.hidden = true; });
+  monitoringOkBtn?.addEventListener("click", () => { monitoringModal.hidden = true; });
+  refreshMonitoringBtn?.addEventListener("click", loadMonitoringPcs);
 }
 
 // 초기화

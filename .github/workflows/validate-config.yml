@@ -4,13 +4,17 @@ on:
   push:
     branches: [ main ]
     paths:
-      - config.sample.json
-      - published-config.json
-      - .github/workflows/validate-config.yml
+      - 'config.json'
+      - 'config.sample.json'
+      - 'published-config.json'
+      - 'scripts/validate-config.js'
+      - '.github/workflows/validate-config.yml'
   pull_request:
     paths:
-      - config.sample.json
-      - published-config.json
+      - 'config.json'
+      - 'config.sample.json'
+      - 'published-config.json'
+      - 'scripts/validate-config.js'
   workflow_dispatch:
 
 jobs:
@@ -19,27 +23,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Validate JSON files
-        shell: bash
-        run: |
-          set -euo pipefail
-          files=()
-          [ -f config.sample.json ] && files+=(config.sample.json)
-          [ -f published-config.json ] && files+=(published-config.json)
-          for file in "${files[@]}"; do
-            echo "Checking $file"
-            node -e '
-              const fs = require("fs");
-              const f = process.argv[1];
-              const data = JSON.parse(fs.readFileSync(f, "utf8"));
-              if (!data.version) throw new Error("version is required");
-              if (!Number.isInteger(data.updateIntervalMinutes) || data.updateIntervalMinutes < 5) throw new Error("updateIntervalMinutes must be >= 5");
-              if (!Number.isInteger(data.slideDurationSeconds) || data.slideDurationSeconds < 5) throw new Error("slideDurationSeconds must be >= 5");
-              if (!Array.isArray(data.slides) || data.slides.length === 0) throw new Error("slides must not be empty");
-              for (const slide of data.slides) {
-                if (!Number.isInteger(slide.order)) throw new Error("slide.order is required");
-                if (!slide.fileName || !slide.fileName.endsWith(".png")) throw new Error("slide.fileName must be a .png file");
-                if (!slide.url || !slide.url.startsWith("https://")) throw new Error("slide.url must be https");
-              }
-            ' "$file"
-          done
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run validate-config.js
+        run: node scripts/validate-config.js

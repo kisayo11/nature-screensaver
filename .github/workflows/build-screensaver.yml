@@ -1,0 +1,44 @@
+name: Build Screensaver Installer
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'client/**'
+      - 'installer/**'
+      - '.github/workflows/build-screensaver.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 8.0
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Publish .NET Screensaver (Single-File self-contained)
+      run: |
+        dotnet publish client\NatureScreensaver.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true
+        $out = "client\bin\Release\net8.0-windows\win-x64\publish"
+        Copy-Item "$out\NatureScreensaver.exe" "$out\NatureScreensaver.scr" -Force
+
+    - name: Setup Inno Setup
+      run: |
+        choco install innosetup -y --no-progress
+
+    - name: Compile Inno Setup Installer
+      run: |
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\NatureScreensaver.iss
+
+    - name: Upload Setup Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: NatureScreensaverSetup
+        path: installer\Output\NatureScreensaverSetup.exe
+        if-no-files-found: error

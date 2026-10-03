@@ -1,9 +1,11 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..', 'admin-web');
+const REPO_ROOT = path.join(__dirname, '..');
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -13,12 +15,65 @@ const MIME_TYPES = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon'
 };
 
+let recentPcs = [];
+
 const server = http.createServer((req, res) => {
-  if (req.method === 'POST' && req.url === '/api/save-bundle') {
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200);
+    res.end();
+    return;
+  }
+
+  // 1. Heartbeat API
+  if (req.url.startsWith('/api/heartbeat')) {
+    if (req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', totalActive: recentPcs.length, pcs: recentPcs }));
+      return;
+    }
+    if (req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => { body += chunk.toString(); });
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body || '{}');
+          const machineName = data.machineName || 'Unknown-PC';
+          const info = {
+            machineName,
+            userName: data.userName || '',
+            version: data.version || 'unknown',
+            screenCount: data.screenCount || 1,
+            os: data.os || '',
+            lastSeen: new Date().toISOString()
+          };
+          const idx = recentPcs.findIndex(p => p.machineName === machineName);
+          if (idx >= 0) recentPcs[idx] = info;
+          else recentPcs.unshift(info);
+          if (recentPcs.length > 50) recentPcs.pop();
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ status: 'ok', timestamp: info.lastSeen }));
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'invalid json' }));
+        }
+      });
+      return;
+    }
+  }
+
+  // 2. Deploy & Save API (POST /api/deploy 또는 POST /api/save-bundle)
+  if (req.method === 'POST' && (req.url === '/api/deploy' || req.url === '/api/save-bundle')) {
     let body = '';
     req.on('data', chunk => { body += chunk.toString(); });
     req.on('end', () => {
@@ -30,56 +85,39 @@ const server = http.createServer((req, res) => {
         // 전달받은 이미지 파일들을 slides 디렉토리에 실제 바이너리로 저장
         if (images && typeof images === 'object') {
           for (const [fileName, base64Data] of Object.entries(images)) {
+            if (!base64Data) continue;
             const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '');
             const buffer = Buffer.from(cleanBase64, 'base64');
             fs.writeFileSync(path.join(slidesDir, fileName), buffer);
           }
         }
 
-        // config.json 저장
+        // config.json 저장 (admin-web, root, published-config.json 동기화)
         const formatted = JSON.stringify(config, null, 2);
         fs.writeFileSync(path.join(PUBLIC_DIR, 'config.json'), formatted, 'utf8');
-        fs.writeFileSync(path.join(__dirname, '..', 'config.json'), formatted, 'utf8');
+        fs.writeFileSync(path.join(REPO_ROOT, 'config.json'), formatted, 'utf8');
+        fs.writeFileSync(path.join(REPO_ROOT, 'published-config.json'), formatted, 'utf8');
 
-        // 1. 구글 드라이브 백업 (비동기로 백그라운드 전송 - 실패해도 Vercel 메인 배포에 영향 없음)
-        const GOOGLE_SCRIPT_BACKUP_URL = "https://script.google.com/macros/s/AKfycbwYdwib_0u08GMu6-SwRa5LLG0tERvrlkTgTiug1Ws_j2pOMts1gdDs-OYroLBBZJAN-A/exec";
-        try {
-          fetch(GOOGLE_SCRIPT_BACKUP_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: formatted
-          }).then(r => r.json()).then(res => {
-            console.log('✅ 구글 드라이브 백그라운드 백업 성공:', res);
-          }).catch(err => {
-            console.warn('⚠️ 구글 드라이브 백업 경고 (메인 배포는 계속 진행):', err.message);
-          });
-        } catch (backupErr) {
-          console.warn('⚠️ 구글 드라이브 백업 호출 스킵:', backupErr.message);
-        }
-
-        // 2. 깃허브 자동 커밋 & 푸시 -> Vercel 즉시 배포 트리거
-        const { exec } = require('child_process');
-        const repoRoot = path.join(__dirname, '..');
+        // Git 커밋 & 푸시
         const commitMsg = `Deploy screensaver version ${config.version || Date.now()}`;
+        const gitCmd = `git add admin-web/slides admin-web/config.json config.json published-config.json && git commit -m "${commitMsg}" && git push origin main`;
 
-        // cmd.exe에서는 && 연산자가 모든 윈도우 버전에서 100% 정상 작동합니다.
-        const gitCmd = `git add admin-web/slides admin-web/config.json && git commit -m "${commitMsg}" && git push origin main`;
-
-        exec(gitCmd, { cwd: repoRoot, shell: 'cmd.exe' }, (execErr, stdout, stderr) => {
+        exec(gitCmd, { cwd: REPO_ROOT, shell: 'cmd.exe' }, (execErr, stdout, stderr) => {
           if (execErr) {
-            console.error('Git Push Error:', stderr || execErr.message);
+            console.warn('Git Push Warning:', stderr || execErr.message);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ 
               status: 'warning', 
-              message: '로컬 저장은 완료되었으나 Git Push 중 오류가 발생했습니다: ' + (stderr || execErr.message)
+              version: config.version,
+              message: '로컬 파일 저장은 완료되었으나 Git Push 실패: ' + (stderr || execErr.message)
             }));
           } else {
             console.log('🚀 Git Push 및 Vercel 배포 트리거 성공!');
-            console.log(stdout);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ 
               status: 'success', 
-              message: 'Vercel 메인 배포 및 구글 드라이브 백업이 모두 완료되었습니다!' 
+              version: config.version,
+              message: '로컬 저장 및 GitHub 커밋/푸시가 완료되었습니다.' 
             }));
           }
         });
@@ -92,7 +130,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-
+  // 3. 정적 파일 서빙
   let reqPath = decodeURI(req.url.split('?')[0]);
   if (reqPath === '/' || reqPath === '') {
     reqPath = '/index.html';

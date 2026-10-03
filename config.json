@@ -5,6 +5,8 @@
   "backgroundColor": "#050505",
   "fitMode": "contain",
   "notice": "4주기 인증 준비",
+  "dDayTitle": "4주기 인증평가",
+  "dDayDate": "2026-11-15",
   "slides": [
     {
       "order": 1,
