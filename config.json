@@ -1,12 +1,10 @@
 {
-  "version": "2026.09.05.2158",
+  "version": "2026.10.03.2037",
   "updateIntervalMinutes": 10,
   "slideDurationSeconds": 15,
   "backgroundColor": "#050505",
   "fitMode": "contain",
   "notice": "4주기 인증 준비",
-  "dDayTitle": "4주기 인증평가",
-  "dDayDate": "2026-11-15",
   "slides": [
     {
       "order": 1,
@@ -56,5 +54,7 @@
       "fileName": "슬라이드8.PNG",
       "url": "https://nature-screensaver.vercel.app/slides/슬라이드8.PNG"
     }
-  ]
+  ],
+  "dDayTitle": "4주기 인증평가",
+  "dDayDate": "2026-11-25"
 }
