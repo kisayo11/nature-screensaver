@@ -1357,7 +1357,8 @@ async function fetchAndApplyGoogleSlides() {
         order,
         title: s.title || `슬라이드 ${order}`,
         fileName: s.fileName || `gslide_${String(order).padStart(2, "0")}.png`,
-        url: s.url
+        url: s.url,
+        localDataUrl: s.localDataUrl
       });
     });
 

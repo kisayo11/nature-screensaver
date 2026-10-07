@@ -1,4 +1,37 @@
-// api/google-slides.js - 구글 슬라이드 프레젠테이션 자동 파싱 및 이미지 추출 Vercel Serverless API
+// api/google-slides.js - 구글 슬라이드 자동 파싱 및 이미지 고화질 추출 Vercel Serverless API
+const https = require('https');
+
+// 리다이렉트 추적 HTTP 바이너리 다운로더
+function fetchBufferWithRedirect(url, maxRedirects = 5) {
+  return new Promise((resolve, reject) => {
+    https.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+      }
+    }, async (res) => {
+      if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location) {
+        if (maxRedirects <= 0) return reject(new Error('Too many redirects'));
+        try {
+          const redirected = await fetchBufferWithRedirect(res.headers.location, maxRedirects - 1);
+          resolve(redirected);
+        } catch (e) {
+          reject(e);
+        }
+        return;
+      }
+
+      if (res.statusCode !== 200) {
+        return reject(new Error(`HTTP ${res.statusCode}`));
+      }
+
+      const chunks = [];
+      res.on('data', d => chunks.push(d));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+    }).on('error', reject);
+  });
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -35,103 +68,109 @@ module.exports = async (req, res) => {
       return sendJson(400, { error: '구글 슬라이드 URL이 필요합니다.' });
     }
 
-    // 1. Presentation ID 추출
-    const match = url.match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+    // 1. Presentation ID 추출 (일반 /edit 및 웹게시 /pub/2PACX- 등 모두 지원)
+    const match = url.match(/\/presentation\/d\/(?:e\/)?([a-zA-Z0-9_-]+)/);
     const presentationId = match ? match[1] : (url.trim().length > 20 && !url.includes('/') ? url.trim() : null);
 
     if (!presentationId) {
       return sendJson(400, { error: '유효한 구글 슬라이드 URL 또는 프레젠테이션 ID를 찾을 수 없습니다.' });
     }
 
-    // 2. 구글 슬라이드 웹 문서 조회 (edit 및 htmlpresent 시도)
-    const targetUrls = [
-      `https://docs.google.com/presentation/d/${presentationId}/edit`,
-      `https://docs.google.com/presentation/d/${presentationId}/htmlpresent`,
-      `https://docs.google.com/presentation/d/${presentationId}/pub?start=false&loop=false&delayms=3000`
-    ];
-
+    // 2. 구글 슬라이드 편집 페이지 조회
+    const editUrl = `https://docs.google.com/presentation/d/${presentationId}/edit`;
     let html = '';
     let presentationTitle = '구글 슬라이드 프레젠테이션';
 
-    for (const testUrl of targetUrls) {
+    try {
+      const htmlBuf = await fetchBufferWithRedirect(editUrl);
+      html = htmlBuf.toString('utf8');
+    } catch (e) {
+      // 만약 edit이 안 될 경우 원본 URL 직접 시도
       try {
-        const resp = await fetch(testUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept-Language': 'ko,en-US;q=0.9,en;q=0.8'
-          }
+        const fallbackBuf = await fetchBufferWithRedirect(url);
+        html = fallbackBuf.toString('utf8');
+      } catch (err2) {
+        return sendJson(404, {
+          error: '구글 슬라이드 문서를 불러올 수 없습니다. 구글 슬라이드의 [공유] 설정이 "링크가 있는 모든 사용자에게 공개(뷰어)"로 되어 있는지 확인해 주세요.'
         });
-        if (resp.ok) {
-          const text = await resp.text();
-          if (text.length > 500) {
-            html = text;
-            break;
-          }
-        }
-      } catch (fetchErr) {
-        // 다음 URL 시도
       }
     }
 
-    if (!html) {
-      return sendJson(404, {
-        error: '구글 슬라이드 문서를 불러올 수 없습니다. 구글 슬라이드의 [공유] 설정이 "링크가 있는 모든 사용자에게 공개(뷰어)"로 되어 있는지 확인해 주세요.'
-      });
-    }
-
-    // 제목 파싱
+    // 문서 제목 파싱
     const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
     if (titleMatch && titleMatch[1]) {
       presentationTitle = titleMatch[1].replace(/ - Google (프레젠테이션|Slides)/i, '').trim();
     }
 
-    // 3. Page ID 파싱
-    // 구글 슬라이드 내부의 페이지 ID는 p1, p2 또는 g로 시작하는 해시(g12345678_0_0 등)로 정의됩니다.
-    const pageIdSet = new Set();
+    // 3. 슬라이드 페이지 ID 및 순서 파싱
+    // 구글 슬라이드 내부 모델 청크의 슬라이드 정의 패턴: [12, "pageId", index, ...]
+    const pageEntries = [];
+    const m12 = [...html.matchAll(/\[12\s*,\s*"([a-zA-Z0-9_\-]+)"\s*,\s*(\d+)/g)];
+    const seenPages = new Set();
 
-    // 패턴 1: JSON 형태 "id":"...", "slide"
-    const jsonMatches = [...html.matchAll(/"id"\s*:\s*"([a-zA-Z0-9_\-]+)"/g)];
-    for (const m of jsonMatches) {
-      const id = m[1];
-      if (/^(p|p\d+|g[a-zA-Z0-9_]+|slide_[a-zA-Z0-9_]+)$/.test(id) && id.length >= 2 && id.length <= 40) {
-        pageIdSet.add(id);
+    for (const m of m12) {
+      const pageId = m[1];
+      const idx = parseInt(m[2], 10);
+      // 마스터 레이아웃 키워드 제외
+      if (['geometric', 'gameday'].includes(pageId)) continue;
+      // p 또는 g로 시작하는 유효 슬라이드만 포함
+      if (/^(p\d+|g[a-zA-Z0-9_]+)$/.test(pageId)) {
+        if (!seenPages.has(pageId)) {
+          seenPages.add(pageId);
+          pageEntries.push({ pageId, idx });
+        }
       }
     }
 
-    // 패턴 2: pageid= 파라미터
-    const pageIdParams = [...html.matchAll(/pageid=([a-zA-Z0-9_\-]+)/gi)];
-    for (const m of pageIdParams) {
-      if (m[1]) pageIdSet.add(m[1]);
+    // idx 기준으로 오름차순 정렬
+    pageEntries.sort((a, b) => a.idx - b.idx);
+    let pageIds = pageEntries.map(p => p.pageId);
+
+    // 만약 [12, ...] 패턴이 없을 경우, 대체 정규식 ("p1", "p2" 등 순차 번호 검색)
+    if (pageIds.length === 0) {
+      for (let i = 1; i <= 50; i++) {
+        const candidate = `p${i}`;
+        if (html.includes(`"${candidate}"`)) {
+          pageIds.push(candidate);
+        } else {
+          break;
+        }
+      }
     }
 
-    // 패턴 3: id="slide-..."
-    const slideIdMatches = [...html.matchAll(/id="slide-([a-zA-Z0-9_\-]+)"/gi)];
-    for (const m of slideIdMatches) {
-      if (m[1]) pageIdSet.add(m[1]);
+    // 그래도 없으면 기본 'p' 포함
+    if (pageIds.length === 0) {
+      pageIds = ['p'];
     }
 
-    // 만약 파싱된 pageId가 없거나 적을 경우 기본 첫 장 (p) 포함
-    if (pageIdSet.size === 0) {
-      pageIdSet.add('p');
-    }
-
-    const pageIds = Array.from(pageIdSet);
-
-    // 4. 각 슬라이드의 이미지 URL 생성
-    // 구글 슬라이드 개별 PNG 내보내기 엔드포인트:
-    // https://docs.google.com/presentation/d/{ID}/export/png?id={ID}&pageid={PAGE_ID}
-    const slides = pageIds.map((pageId, idx) => {
-      const order = idx + 1;
+    // 4. 각 슬라이드의 고화질 PNG 이미지를 서버에서 직접 다운로드하여 Base64 Data URL 생성
+    // (이를 통해 브라우저 CORS 문제 및 307 리다이렉트 문제를 100% 해결하고 미리보기 및 배포 지원)
+    const slides = [];
+    for (let i = 0; i < pageIds.length; i++) {
+      const pageId = pageIds[i];
+      const order = i + 1;
       const exportUrl = `https://docs.google.com/presentation/d/${presentationId}/export/png?id=${presentationId}&pageid=${pageId}`;
       const fileName = `gslide_${String(order).padStart(2, '0')}.png`;
-      return {
+
+      let dataUrl = '';
+      try {
+        const imgBuf = await fetchBufferWithRedirect(exportUrl);
+        if (imgBuf && imgBuf.length > 500) {
+          dataUrl = `data:image/png;base64,${imgBuf.toString('base64')}`;
+        }
+      } catch (imgErr) {
+        console.warn(`[Google Slides] Image download failed for ${pageId}:`, imgErr.message);
+      }
+
+      slides.push({
         order,
         pageId,
         title: `${presentationTitle} - ${order}번 슬라이드`,
         fileName,
-        url: exportUrl
-      };
-    });
+        url: exportUrl,
+        localDataUrl: dataUrl // 브라우저 및 시뮬레이터에서 즉시 렌더링 가능한 Base64 이미지
+      });
+    }
 
     return sendJson(200, {
       status: 'success',
