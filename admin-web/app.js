@@ -1688,8 +1688,97 @@ if (openMonitoringBtn && monitoringModal) {
   refreshMonitoringBtn?.addEventListener("click", loadMonitoringPcs);
 }
 
+/* ----------------------------------------------------
+   화면보호기 설치 프로그램 (.exe) 다운로드 모달 관리
+---------------------------------------------------- */
+const installerModal = document.querySelector("#installerModal");
+const openInstallerModalBtn = document.querySelector("#openInstallerModalBtn");
+const installerCloseBtn = document.querySelector("#installerClose");
+const installerOkBtn = document.querySelector("#installerOk");
+const downloadInstallerBtn = document.querySelector("#downloadInstallerBtn");
+const customInstallerUrlInput = document.querySelector("#customInstallerUrlInput");
+const saveCustomInstallerUrlBtn = document.querySelector("#saveCustomInstallerUrlBtn");
+const resetInstallerUrlBtn = document.querySelector("#resetInstallerUrlBtn");
+
+const DEFAULT_INSTALLER_URL = "https://github.com/kisayo11/nature-screensaver/releases/latest/download/NatureScreensaverSetup.exe";
+const INSTALLER_URL_KEY = "nature_screensaver_installer_url";
+
+function formatDirectDownloadUrl(rawUrl) {
+  const url = (rawUrl || "").trim();
+  if (!url) return DEFAULT_INSTALLER_URL;
+
+  // 구글 드라이브 공유 링크를 클릭 시 즉시 다운로드되는 URL로 자동 변환
+  const gdriveMatch1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (gdriveMatch1 && gdriveMatch1[1]) {
+    return `https://drive.google.com/uc?export=download&id=${gdriveMatch1[1]}`;
+  }
+  const gdriveMatch2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (url.includes("drive.google.com") && gdriveMatch2 && gdriveMatch2[1]) {
+    return `https://drive.google.com/uc?export=download&id=${gdriveMatch2[1]}`;
+  }
+
+  return url;
+}
+
+function getStoredInstallerUrl() {
+  return localStorage.getItem(INSTALLER_URL_KEY) || DEFAULT_INSTALLER_URL;
+}
+
+function updateInstallerModalUi() {
+  const curUrl = getStoredInstallerUrl();
+  if (downloadInstallerBtn) {
+    downloadInstallerBtn.href = curUrl;
+  }
+  if (customInstallerUrlInput) {
+    customInstallerUrlInput.value = curUrl;
+  }
+}
+
+if (openInstallerModalBtn && installerModal) {
+  openInstallerModalBtn.addEventListener("click", () => {
+    updateInstallerModalUi();
+    installerModal.hidden = false;
+  });
+
+  installerCloseBtn?.addEventListener("click", () => {
+    installerModal.hidden = true;
+  });
+
+  installerOkBtn?.addEventListener("click", () => {
+    installerModal.hidden = true;
+  });
+
+  // 오버레이 클릭 시 닫기
+  installerModal.addEventListener("click", (e) => {
+    if (e.target === installerModal) {
+      installerModal.hidden = true;
+    }
+  });
+
+  saveCustomInstallerUrlBtn?.addEventListener("click", () => {
+    const rawVal = customInstallerUrlInput?.value?.trim();
+    if (!rawVal) {
+      alert("다운로드 URL을 입력해주세요.");
+      return;
+    }
+    const convertedUrl = formatDirectDownloadUrl(rawVal);
+    localStorage.setItem(INSTALLER_URL_KEY, convertedUrl);
+    updateInstallerModalUi();
+    alert("설치파일 다운로드 링크가 저장되었습니다.\n상단 다운로드 버튼을 누르면 이 링크로 바로 받아집니다.");
+  });
+
+  resetInstallerUrlBtn?.addEventListener("click", () => {
+    if (confirm("다운로드 링크를 공식 기본 다운로드 경로로 초기화하시겠습니까?")) {
+      localStorage.removeItem(INSTALLER_URL_KEY);
+      updateInstallerModalUi();
+      alert("기본값으로 복원되었습니다.");
+    }
+  });
+}
+
 // 초기화
 initAuth();
 initPresetChips();
 loadDraft();
+
 
