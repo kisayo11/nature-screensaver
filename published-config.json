@@ -1,5 +1,5 @@
 {
-  "version": "2026.10.03.2045",
+  "version": "2026.10.07.1147",
   "updateIntervalMinutes": 10,
   "slideDurationSeconds": 15,
   "backgroundColor": "#050505",
@@ -8,51 +8,63 @@
   "slides": [
     {
       "order": 1,
-      "title": "슬라이드1",
-      "fileName": "슬라이드1.PNG",
-      "url": "https://nature-screensaver.vercel.app/slides/슬라이드1.PNG"
+      "title": "네이처요양병원_4주기인증_화면보호기 - 1번 슬라이드",
+      "fileName": "gslide_01.png",
+      "url": "https://docs.google.com/presentation/d/1wNiwzO6X5PagCwLdmOsZ7_nNubvGg8Tm_0kU0JWHuBM/export/png?id=1wNiwzO6X5PagCwLdmOsZ7_nNubvGg8Tm_0kU0JWHuBM&pageid=p9"
     },
     {
       "order": 2,
-      "title": "슬라이드2",
-      "fileName": "슬라이드2.PNG",
-      "url": "https://nature-screensaver.vercel.app/slides/슬라이드2.PNG"
+      "title": "네이처요양병원_4주기인증_화면보호기 - 2번 슬라이드",
+      "fileName": "gslide_02.png",
+      "url": "https://docs.google.com/presentation/d/1wNiwzO6X5PagCwLdmOsZ7_nNubvGg8Tm_0kU0JWHuBM/export/png?id=1wNiwzO6X5PagCwLdmOsZ7_nNubvGg8Tm_0kU0JWHuBM&pageid=p10"
     },
     {
       "order": 3,
-      "title": "슬라이드3",
-      "fileName": "슬라이드3.PNG",
-      "url": "https://nature-screensaver.vercel.app/slides/슬라이드3.PNG"
+      "title": "네이처요양병원_4주기인증_화면보호기 - 3번 슬라이드",
+      "fileName": "gslide_03.png",
+      "url": "https://nature-screensaver.vercel.app/slides/gslide_03.png"
     },
     {
       "order": 4,
-      "title": "슬라이드4",
-      "fileName": "슬라이드4.PNG",
-      "url": "https://nature-screensaver.vercel.app/slides/슬라이드4.PNG"
+      "title": "네이처요양병원_4주기인증_화면보호기 - 4번 슬라이드",
+      "fileName": "gslide_04.png",
+      "url": "https://nature-screensaver.vercel.app/slides/gslide_04.png"
     },
     {
       "order": 5,
-      "title": "슬라이드5",
-      "fileName": "슬라이드5.PNG",
-      "url": "https://nature-screensaver.vercel.app/slides/슬라이드5.PNG"
+      "title": "네이처요양병원_4주기인증_화면보호기 - 5번 슬라이드",
+      "fileName": "gslide_05.png",
+      "url": "https://nature-screensaver.vercel.app/slides/gslide_05.png"
     },
     {
       "order": 6,
-      "title": "슬라이드6",
-      "fileName": "슬라이드6.PNG",
-      "url": "https://nature-screensaver.vercel.app/slides/슬라이드6.PNG"
+      "title": "네이처요양병원_4주기인증_화면보호기 - 6번 슬라이드",
+      "fileName": "gslide_06.png",
+      "url": "https://nature-screensaver.vercel.app/slides/gslide_06.png"
     },
     {
       "order": 7,
-      "title": "슬라이드7",
-      "fileName": "슬라이드7.PNG",
-      "url": "https://nature-screensaver.vercel.app/slides/슬라이드7.PNG"
+      "title": "네이처요양병원_4주기인증_화면보호기 - 7번 슬라이드",
+      "fileName": "gslide_07.png",
+      "url": "https://nature-screensaver.vercel.app/slides/gslide_07.png"
     },
     {
       "order": 8,
-      "title": "슬라이드8",
-      "fileName": "슬라이드8.PNG",
-      "url": "https://nature-screensaver.vercel.app/slides/슬라이드8.PNG"
+      "title": "네이처요양병원_4주기인증_화면보호기 - 8번 슬라이드",
+      "fileName": "gslide_08.png",
+      "url": "https://nature-screensaver.vercel.app/slides/gslide_08.png"
+    },
+    {
+      "order": 9,
+      "title": "네이처요양병원_4주기인증_화면보호기 - 9번 슬라이드",
+      "fileName": "gslide_09.png",
+      "url": "https://nature-screensaver.vercel.app/slides/gslide_09.png"
+    },
+    {
+      "order": 10,
+      "title": "네이처요양병원_4주기인증_화면보호기 - 10번 슬라이드",
+      "fileName": "gslide_10.png",
+      "url": "https://nature-screensaver.vercel.app/slides/gslide_10.png"
     }
   ],
   "dDayTitle": "4주기 인증평가",
