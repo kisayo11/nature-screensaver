@@ -254,10 +254,55 @@
             이미지 파일들 선택 추가
             <input type="file" id="imageBatchInput" accept="image/png,image/jpeg" multiple hidden />
           </label>
+          <button id="googleSlidesOpen" type="button" class="btn btn-secondary btn-sm" style="background: linear-gradient(135deg, #4f46e5, #0ea5e9); color: white; border: none; font-weight: 600;">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px; margin-right:4px;">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            📊 구글 슬라이드 연동
+          </button>
           <button id="add" type="button" class="btn btn-secondary btn-sm">＋ 빈 슬라이드</button>
           <button id="bulkOpen" type="button" class="btn btn-secondary btn-sm">🔗 링크 일괄 추가</button>
           <button id="renumber" type="button" class="btn btn-secondary btn-sm">순서 재정렬</button>
           <button id="clearDraft" type="button" class="btn btn-ghost btn-sm text-danger">초안 초기화</button>
+        </div>
+      </div>
+
+      <!-- 구글 슬라이드(Google Slides) 자동 연동 패널 -->
+      <div id="googleSlidesPanel" class="bulk-drawer" hidden style="background: rgba(30, 27, 75, 0.4); border-color: rgba(99, 102, 241, 0.3);">
+        <div class="bulk-inner">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+            <div>
+              <strong style="font-size: 14px; color: #a5b4fc; display: flex; align-items: center; gap: 6px;">
+                <span>📊</span> 구글 슬라이드(Google Slides) 프레젠테이션 자동 연동
+              </strong>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                구글 슬라이드 문서의 링크만 넣으면, 각 슬라이드를 자동으로 인식하여 고화질 이미지 카드를 일괄 생성합니다. (PPT 이미지 내보내기 불필요)
+              </p>
+            </div>
+            <button id="googleSlidesClose" type="button" class="btn btn-ghost btn-sm" style="font-size: 16px; padding: 2px 8px;">&times;</button>
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <input id="googleSlidesUrl" type="url" placeholder="https://docs.google.com/presentation/d/.../edit"
+              spellcheck="false" style="flex: 1; font-family: var(--font-code); font-size: 12.5px;" />
+            <button id="googleSlidesFetchBtn" type="button" class="btn btn-primary btn-sm" style="white-space: nowrap; background: #6366f1;">
+              ⚡ 슬라이드 자동 불러오기
+            </button>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted);">
+            <div style="display: flex; gap: 16px; align-items: center;">
+              <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                <input type="radio" name="gslideMode" value="replace" checked /> 기존 목록 전체 교체
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                <input type="radio" name="gslideMode" value="append" /> 기존 목록 뒤에 추가
+              </label>
+            </div>
+            <span id="googleSlidesMsg" style="color: #38bdf8;">💡 [공유] 설정이 '링크가 있는 모든 사용자(뷰어)'인지 확인해 주세요.</span>
+          </div>
         </div>
       </div>
 

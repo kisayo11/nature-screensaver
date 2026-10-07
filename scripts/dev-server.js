@@ -2,6 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
+const googleSlidesHandler = require('../api/google-slides');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..', 'admin-web');
@@ -68,6 +69,30 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ error: 'invalid json' }));
         }
       });
+      return;
+    }
+  }
+
+  // 1-2. Google Slides API
+  if (req.url.startsWith('/api/google-slides')) {
+    const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    req.query = Object.fromEntries(parsedUrl.searchParams.entries());
+
+    if (req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => { body += chunk.toString(); });
+      req.on('end', async () => {
+        try {
+          req.body = JSON.parse(body || '{}');
+          await googleSlidesHandler(req, res);
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'invalid json' }));
+        }
+      });
+      return;
+    } else {
+      googleSlidesHandler(req, res);
       return;
     }
   }

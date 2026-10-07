@@ -45,11 +45,20 @@ const newPwd = document.querySelector("#newPwd");
 const confirmPwd = document.querySelector("#confirmPwd");
 const pwdChangeError = document.querySelector("#pwdChangeError");
 
+// 구글 슬라이드 연동 엘리먼트
+const googleSlidesOpen = document.querySelector("#googleSlidesOpen");
+const googleSlidesClose = document.querySelector("#googleSlidesClose");
+const googleSlidesPanel = document.querySelector("#googleSlidesPanel");
+const googleSlidesUrl = document.querySelector("#googleSlidesUrl");
+const googleSlidesFetchBtn = document.querySelector("#googleSlidesFetchBtn");
+const googleSlidesMsg = document.querySelector("#googleSlidesMsg");
+
 const draftKey = "natureScreensaverAdminDraft";
 const historyKey = "natureScreensaverHistory";
 const authKey = "natureScreensaverAuth";
 const pwdKey = "natureScreensaverPassword";
 const githubTokenKey = "natureScreensaverGithubToken";
+const googleSlidesUrlKey = "natureScreensaverGoogleSlidesUrl";
 const defaultPassword = "01053884497";
 
 const GITHUB_OWNER = "kisayo11";
@@ -1192,6 +1201,11 @@ function loadDraft() {
     });
   }
 
+  // 구글 슬라이드 최근 URL 복원
+  if (googleSlidesUrl) {
+    googleSlidesUrl.value = localStorage.getItem(googleSlidesUrlKey) || "";
+  }
+
   const saved = localStorage.getItem(draftKey);
   const config = saved ? JSON.parse(saved) : {
     version: "2026.07.27.001",
@@ -1292,6 +1306,106 @@ document.querySelector("#bulkAdd").addEventListener("click", () => {
   renumber();
   refresh();
 });
+
+/* ----------------------------------------------------
+   구글 슬라이드(Google Slides) 연동 처리기
+---------------------------------------------------- */
+async function fetchAndApplyGoogleSlides() {
+  const url = googleSlidesUrl?.value?.trim();
+  if (!url) {
+    alert("구글 슬라이드 공유 링크를 입력해 주세요.");
+    googleSlidesUrl?.focus();
+    return;
+  }
+
+  localStorage.setItem(googleSlidesUrlKey, url);
+
+  if (googleSlidesFetchBtn) {
+    googleSlidesFetchBtn.disabled = true;
+    googleSlidesFetchBtn.textContent = "⏳ 슬라이드 분석 중...";
+  }
+  if (googleSlidesMsg) {
+    googleSlidesMsg.style.color = "#38bdf8";
+    googleSlidesMsg.textContent = "구글 슬라이드 문서 정보를 분석하고 있습니다...";
+  }
+
+  try {
+    const res = await fetch("/api/google-slides", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
+    });
+
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      throw new Error(data.error || "구글 슬라이드 파싱 실패");
+    }
+
+    if (!Array.isArray(data.slides) || data.slides.length === 0) {
+      throw new Error("슬라이드 목록을 찾을 수 없습니다. 문서에 슬라이드가 포함되어 있는지 확인해 주세요.");
+    }
+
+    const mode = document.querySelector('input[name="gslideMode"]:checked')?.value || "replace";
+    if (mode === "replace") {
+      slidesList.innerHTML = "";
+    }
+
+    const baseCount = slidesList.querySelectorAll(".slide-card").length;
+    data.slides.forEach((s, idx) => {
+      const order = baseCount + idx + 1;
+      renderSlideCard({
+        order,
+        title: s.title || `슬라이드 ${order}`,
+        fileName: s.fileName || `gslide_${String(order).padStart(2, "0")}.png`,
+        url: s.url
+      });
+    });
+
+    renumber();
+    refresh();
+
+    if (googleSlidesMsg) {
+      googleSlidesMsg.style.color = "#34d399";
+      googleSlidesMsg.textContent = `✅ 총 ${data.slides.length}장의 슬라이드를 성공적으로 불러왔습니다!`;
+    }
+
+    alert(`🎉 구글 슬라이드 [${data.title || "문서"}]에서 총 ${data.slides.length}장의 슬라이드를 성공적으로 불러왔습니다!\n\n이제 [화면보호기 미리보기]로 검수한 후 [배포하기]를 누르시면 전 병원 PC에 자동 반영됩니다.`);
+
+    if (googleSlidesPanel) {
+      googleSlidesPanel.hidden = true;
+    }
+
+  } catch (err) {
+    console.error("Google Slides Import Error:", err);
+    if (googleSlidesMsg) {
+      googleSlidesMsg.style.color = "#f87171";
+      googleSlidesMsg.textContent = `❌ 오류: ${err.message}`;
+    }
+    alert(`❌ 구글 슬라이드 불러오기 실패:\n${err.message}\n\n• 구글 슬라이드 상단의 [공유] 버튼을 누르고\n• '일반 액세스'가 '링크가 있는 모든 사용자(뷰어)'로 설정되어 있는지 확인해 주세요.`);
+  } finally {
+    if (googleSlidesFetchBtn) {
+      googleSlidesFetchBtn.disabled = false;
+      googleSlidesFetchBtn.textContent = "⚡ 슬라이드 자동 불러오기";
+    }
+  }
+}
+
+if (googleSlidesOpen && googleSlidesPanel) {
+  googleSlidesOpen.addEventListener("click", () => {
+    googleSlidesPanel.hidden = !googleSlidesPanel.hidden;
+    if (!googleSlidesPanel.hidden && googleSlidesUrl) {
+      googleSlidesUrl.focus();
+    }
+  });
+}
+if (googleSlidesClose && googleSlidesPanel) {
+  googleSlidesClose.addEventListener("click", () => {
+    googleSlidesPanel.hidden = true;
+  });
+}
+if (googleSlidesFetchBtn) {
+  googleSlidesFetchBtn.addEventListener("click", fetchAndApplyGoogleSlides);
+}
 
 document.querySelector("#clearDraft").addEventListener("click", () => {
   if (!confirm("초안을 초기화하고 기본 상태로 되돌릴까요?")) return;

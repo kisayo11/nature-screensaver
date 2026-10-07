@@ -30,6 +30,9 @@ npm run dev
 
 ## 📚 상세 문서
 
+* **[종합 기술 명세서 (docs/technical-specification.md)](docs/technical-specification.md)** - 아키텍처, 렌더링 엔진, 통신 프로토콜, 보안
+* **[사용 및 운영 가이드 (docs/user-guide.md)](docs/user-guide.md)** - 원무과 관리자, PC 사용자, 전산담당자를 위한 사용법
 * [운영 및 세팅 가이드 (docs/operation-and-setup-guide.md)](docs/operation-and-setup-guide.md)
 * [구글 앱스 스크립트 백업 연동 가이드 (docs/google-apps-script-setup.md)](docs/google-apps-script-setup.md)
 * [워크플로우 개선 보고서 (docs/workflow-improvement-report.md)](docs/workflow-improvement-report.md)
+
