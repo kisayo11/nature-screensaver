@@ -59,7 +59,7 @@ const authKey = "natureScreensaverAuth";
 const pwdKey = "natureScreensaverPassword";
 const githubTokenKey = "natureScreensaverGithubToken";
 const googleSlidesUrlKey = "natureScreensaverGoogleSlidesUrl";
-const defaultPassword = "01053884497";
+const defaultPassword = "5114";
 
 const GITHUB_OWNER = "kisayo11";
 const GITHUB_REPO = "nature-screensaver";
