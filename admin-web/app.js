@@ -1727,7 +1727,7 @@ function getStoredInstallerUrl() {
 function updateInstallerModalUi() {
   const curUrl = getStoredInstallerUrl();
   if (downloadInstallerBtn) {
-    downloadInstallerBtn.href = curUrl;
+    downloadInstallerBtn.href = formatDirectDownloadUrl(curUrl);
   }
   if (customInstallerUrlInput) {
     customInstallerUrlInput.value = curUrl;
