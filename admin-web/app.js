@@ -1628,7 +1628,7 @@ document.querySelector("#dDayTitle")?.addEventListener("input", refresh);
 document.querySelector("#dDayDate")?.addEventListener("change", refresh);
 
 /* ----------------------------------------------------
-   원내 PC 화면보호기 가동 상태 모니터링 모달
+   원내 PC 화면보호기 가동 상태 모니터링 모달 (고도화: 통계, 검색, 필터, 페이지네이션, CSV)
 ---------------------------------------------------- */
 const monitoringModal = document.querySelector("#monitoringModal");
 const openMonitoringBtn = document.querySelector("#openMonitoringBtn");
@@ -1636,56 +1636,259 @@ const monitoringCloseBtn = document.querySelector("#monitoringClose");
 const monitoringOkBtn = document.querySelector("#monitoringOk");
 const refreshMonitoringBtn = document.querySelector("#refreshMonitoringBtn");
 const monitoringTableBody = document.querySelector("#monitoringTableBody");
-const activePcCountBadge = document.querySelector("#activePcCountBadge");
+const monitoringSearchInput = document.querySelector("#monitoringSearchInput");
+const monitoringStatusFilter = document.querySelector("#monitoringStatusFilter");
+const monitoringAutoRefreshCheck = document.querySelector("#monitoringAutoRefreshCheck");
+const monitoringExportCsvBtn = document.querySelector("#monitoringExportCsvBtn");
+const monitoringPaginationWrap = document.querySelector("#monitoringPagination");
+const monitoringPageInfo = document.querySelector("#monitoringPageInfo");
 
-async function loadMonitoringPcs() {
+const statTotalPc = document.querySelector("#statTotalPc");
+const statOnlinePc = document.querySelector("#statOnlinePc");
+const statOfflinePc = document.querySelector("#statOfflinePc");
+const statDualPc = document.querySelector("#statDualPc");
+
+let allMonitoringPcs = [];
+let monitoringCurrentPage = 1;
+const MONITORING_PAGE_SIZE = 10;
+let monitoringAutoRefreshTimer = null;
+
+function renderMonitoring() {
   if (!monitoringTableBody) return;
-  monitoringTableBody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: var(--text-muted);">원내 PC 신호를 확인하는 중...</td></tr>`;
+
+  const query = (monitoringSearchInput?.value || "").trim().toLowerCase();
+  const statusFilter = monitoringStatusFilter?.value || "all";
+
+  // 1. 상태 계산 및 전체 통계 업데이트
+  const now = Date.now();
+  let onlineCount = 0;
+  let offlineCount = 0;
+  let dualCount = 0;
+
+  const enriched = allMonitoringPcs.map(p => {
+    const d = new Date(p.lastSeen);
+    const diffMin = Math.max(0, Math.round((now - d.getTime()) / 60000));
+    const isOnline = diffMin <= 30; // 30분 이내 신호는 정상 가동
+
+    if (isOnline) onlineCount++;
+    else offlineCount++;
+
+    if ((p.screenCount || 1) >= 2) dualCount++;
+
+    return { ...p, diffMin, isOnline, seenDate: d };
+  });
+
+  if (statTotalPc) statTotalPc.textContent = `${allMonitoringPcs.length}대`;
+  if (statOnlinePc) statOnlinePc.textContent = `${onlineCount}대`;
+  if (statOfflinePc) statOfflinePc.textContent = `${offlineCount}대`;
+  if (statDualPc) statDualPc.textContent = `${dualCount}대`;
+
+  // 2. 검색 및 필터링
+  let filtered = enriched.filter(p => {
+    if (statusFilter === "online" && !p.isOnline) return false;
+    if (statusFilter === "offline" && p.isOnline) return false;
+
+    if (query) {
+      const matchMachine = (p.machineName || "").toLowerCase().includes(query);
+      const matchUser = (p.userName || "").toLowerCase().includes(query);
+      const matchVer = (p.version || "").toLowerCase().includes(query);
+      return matchMachine || matchUser || matchVer;
+    }
+    return true;
+  });
+
+  // 온라인 우선, 그 다음 최신 동기화 순 정렬
+  filtered.sort((a, b) => {
+    if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
+    return b.seenDate.getTime() - a.seenDate.getTime();
+  });
+
+  // 3. 페이지네이션 계산
+  const totalCount = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / MONITORING_PAGE_SIZE));
+  if (monitoringCurrentPage > totalPages) monitoringCurrentPage = totalPages;
+  if (monitoringCurrentPage < 1) monitoringCurrentPage = 1;
+
+  const startIndex = (monitoringCurrentPage - 1) * MONITORING_PAGE_SIZE;
+  const pageItems = filtered.slice(startIndex, startIndex + MONITORING_PAGE_SIZE);
+
+  // 4. 테이블 렌더링
+  if (!allMonitoringPcs.length) {
+    monitoringTableBody.innerHTML = `<tr><td colspan="6" style="padding: 30px; text-align: center; color: var(--text-muted);">현재 보고된 PC 신호가 없습니다.<br><span style="font-size: 12px; opacity: 0.8;">(신규 v1.0.0 설치 PC에서 화면보호기가 1회 이상 작동하면 자동 등록됩니다)</span></td></tr>`;
+  } else if (!pageItems.length) {
+    monitoringTableBody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: var(--text-muted);">검색 조건에 맞는 PC가 없습니다.</td></tr>`;
+  } else {
+    monitoringTableBody.innerHTML = pageItems.map(p => {
+      const timeStr = p.diffMin <= 1 ? "방금 전" : (p.diffMin < 60 ? `${p.diffMin}분 전` : p.seenDate.toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }));
+      const statusBadge = p.isOnline 
+        ? `<span class="status-chip success" style="font-size: 11px; padding: 2px 7px;">정상 가동</span>` 
+        : `<span class="status-chip neutral" style="font-size: 11px; padding: 2px 7px; color: #94a3b8; border-color: rgba(148,163,184,0.3);">대기 중</span>`;
+
+      const screenBadge = (p.screenCount || 1) >= 2 
+        ? `<span style="color: #60a5fa; font-weight: 600;">🖥️ ${p.screenCount}대 (듀얼)</span>` 
+        : `<span style="color: var(--text-muted);">🖥️ 1대</span>`;
+
+      return `
+        <tr style="border-bottom: 1px solid var(--border-color);">
+          <td style="padding: 9px 12px;">${statusBadge}</td>
+          <td style="padding: 9px 12px; font-weight: 600; color: #fff;">💻 ${esc(p.machineName)}</td>
+          <td style="padding: 9px 12px; color: var(--text-muted);">${esc(p.userName || '-')}</td>
+          <td style="padding: 9px 12px;">${screenBadge}</td>
+          <td style="padding: 9px 12px;"><code class="code-font" style="font-size: 11.5px; background: rgba(0,0,0,0.25); padding: 2px 5px; border-radius: 4px;">${esc(p.version)}</code></td>
+          <td style="padding: 9px 12px; color: var(--text-muted); font-size: 12px;">${timeStr}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  // 5. 페이지 정보 및 버튼 렌더링
+  const nowTimeStr = new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  if (monitoringPageInfo) {
+    if (totalCount === 0) {
+      monitoringPageInfo.innerHTML = `총 0대 (마지막 확인: ${nowTimeStr})`;
+    } else {
+      const endItem = Math.min(totalCount, startIndex + MONITORING_PAGE_SIZE);
+      monitoringPageInfo.innerHTML = `총 <strong>${totalCount}대</strong> 중 ${startIndex + 1}-${endItem}대 표시 <span style="margin-left: 8px; opacity: 0.7;">(마지막 확인: ${nowTimeStr})</span>`;
+    }
+  }
+
+  if (monitoringPaginationWrap) {
+    if (totalPages <= 1) {
+      monitoringPaginationWrap.innerHTML = "";
+    } else {
+      let pageHtml = "";
+      pageHtml += `<button type="button" class="btn btn-secondary btn-sm" ${monitoringCurrentPage === 1 ? 'disabled style="opacity: 0.4;"' : ''} onclick="changeMonitoringPage(${monitoringCurrentPage - 1})">◀ 이전</button>`;
+
+      for (let i = 1; i <= totalPages; i++) {
+        const isActive = i === monitoringCurrentPage;
+        const activeStyle = isActive 
+          ? 'background: #10b981; border-color: #10b981; color: #fff; font-weight: 700;' 
+          : 'background: rgba(255,255,255,0.05); color: var(--text-muted);';
+        pageHtml += `<button type="button" class="btn btn-sm" style="min-width: 28px; padding: 4px 8px; ${activeStyle}" onclick="changeMonitoringPage(${i})">${i}</button>`;
+      }
+
+      pageHtml += `<button type="button" class="btn btn-secondary btn-sm" ${monitoringCurrentPage === totalPages ? 'disabled style="opacity: 0.4;"' : ''} onclick="changeMonitoringPage(${monitoringCurrentPage + 1})">다음 ▶</button>`;
+      monitoringPaginationWrap.innerHTML = pageHtml;
+    }
+  }
+}
+
+// 글로벌 페이지 전환 함수
+window.changeMonitoringPage = function(page) {
+  monitoringCurrentPage = page;
+  renderMonitoring();
+};
+
+async function loadMonitoringPcs(silent = false) {
+  if (!monitoringTableBody) return;
+  if (!silent) {
+    monitoringTableBody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: var(--text-muted);">원내 PC 신호를 확인하는 중...</td></tr>`;
+  }
+
   try {
     const res = await fetch("/api/heartbeat");
     if (!res.ok) throw new Error("서버 응답 오류 (HTTP " + res.status + ")");
     const data = await res.json();
-    const pcs = data.pcs || [];
-    if (activePcCountBadge) activePcCountBadge.textContent = `활성 PC: ${pcs.length}대`;
-
-    if (!pcs.length) {
-      monitoringTableBody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: var(--text-muted);">현재 보고된 PC 신호가 없습니다.<br><span style="font-size: 12px;">(병원 PC에서 화면보호기가 1회 이상 실행되면 자동 등록됩니다)</span></td></tr>`;
-      return;
-    }
-
-    monitoringTableBody.innerHTML = pcs.map(p => {
-      const d = new Date(p.lastSeen);
-      const diffMin = Math.round((Date.now() - d.getTime()) / 60000);
-      const timeStr = diffMin <= 1 ? "방금 전" : (diffMin < 60 ? `${diffMin}분 전` : d.toLocaleString());
-      const isOnline = diffMin <= 30;
-      const statusBadge = isOnline 
-        ? `<span class="status-chip success">정상 가동</span>` 
-        : `<span class="status-chip neutral">대기 중</span>`;
-
-      return `
-        <tr style="border-bottom: 1px solid var(--border-color);">
-          <td style="padding: 10px 14px;">${statusBadge}</td>
-          <td style="padding: 10px 14px; font-weight: 600;">💻 ${esc(p.machineName)}</td>
-          <td style="padding: 10px 14px; color: var(--text-muted);">${esc(p.userName || '-')}</td>
-          <td style="padding: 10px 14px;">${p.screenCount || 1}대 모니터</td>
-          <td style="padding: 10px 14px;"><code class="code-font" style="font-size: 11px;">${esc(p.version)}</code></td>
-          <td style="padding: 10px 14px; color: var(--text-muted);">${timeStr}</td>
-        </tr>
-      `;
-    }).join("");
+    allMonitoringPcs = Array.isArray(data.pcs) ? data.pcs : [];
+    renderMonitoring();
   } catch (err) {
-    monitoringTableBody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: #ef4444;">PC 신호 조회 실패: ${esc(err.message)}</td></tr>`;
+    if (!silent) {
+      monitoringTableBody.innerHTML = `<tr><td colspan="6" style="padding: 24px; text-align: center; color: #ef4444;">PC 신호 조회 실패: ${esc(err.message)}</td></tr>`;
+    }
   }
+}
+
+// 엑셀(CSV) 내보내기 (의료기관 인증평가 증빙용 점검표)
+function exportMonitoringToCsv() {
+  if (!allMonitoringPcs.length) {
+    alert("내보낼 PC 가동 데이터가 없습니다.");
+    return;
+  }
+
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const timeStr = String(now.getHours()).padStart(2, "0") + String(now.getMinutes()).padStart(2, "0");
+  const filename = `네이처_화면보호기_PC가동현황_${dateStr}_${timeStr}.csv`;
+
+  // UTF-8 BOM (\uFEFF)을 포함하여 엑셀 한글 깨짐 방지
+  let csv = "\uFEFF상태,PC이름(컴퓨터명),사용자계정,모니터수,적용버전,운영체제,마지막동기화일시,가동상태(분전)\n";
+
+  allMonitoringPcs.forEach(p => {
+    const d = new Date(p.lastSeen);
+    const diffMin = Math.max(0, Math.round((now.getTime() - d.getTime()) / 60000));
+    const status = diffMin <= 30 ? "정상가동" : "대기중";
+    const cleanMachine = (p.machineName || "").replace(/,/g, " ");
+    const cleanUser = (p.userName || "").replace(/,/g, " ");
+    const cleanOs = (p.os || "").replace(/,/g, " ");
+    const cleanVer = (p.version || "").replace(/,/g, " ");
+    const fullDate = d.toLocaleString("ko-KR");
+
+    csv += `${status},"${cleanMachine}","${cleanUser}",${p.screenCount || 1},"${cleanVer}","${cleanOs}","${fullDate}",${diffMin}분전\n`;
+  });
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 if (openMonitoringBtn && monitoringModal) {
   openMonitoringBtn.addEventListener("click", () => {
     monitoringModal.hidden = false;
+    monitoringCurrentPage = 1;
     loadMonitoringPcs();
   });
-  monitoringCloseBtn?.addEventListener("click", () => { monitoringModal.hidden = true; });
-  monitoringOkBtn?.addEventListener("click", () => { monitoringModal.hidden = true; });
-  refreshMonitoringBtn?.addEventListener("click", loadMonitoringPcs);
+
+  monitoringCloseBtn?.addEventListener("click", () => {
+    monitoringModal.hidden = true;
+    if (monitoringAutoRefreshTimer) {
+      clearInterval(monitoringAutoRefreshTimer);
+      monitoringAutoRefreshTimer = null;
+    }
+  });
+
+  monitoringOkBtn?.addEventListener("click", () => {
+    monitoringModal.hidden = true;
+    if (monitoringAutoRefreshTimer) {
+      clearInterval(monitoringAutoRefreshTimer);
+      monitoringAutoRefreshTimer = null;
+    }
+  });
+
+  refreshMonitoringBtn?.addEventListener("click", () => {
+    loadMonitoringPcs();
+  });
+
+  monitoringSearchInput?.addEventListener("input", () => {
+    monitoringCurrentPage = 1;
+    renderMonitoring();
+  });
+
+  monitoringStatusFilter?.addEventListener("change", () => {
+    monitoringCurrentPage = 1;
+    renderMonitoring();
+  });
+
+  monitoringExportCsvBtn?.addEventListener("click", exportMonitoringToCsv);
+
+  monitoringAutoRefreshCheck?.addEventListener("change", (e) => {
+    if (e.target.checked) {
+      if (monitoringAutoRefreshTimer) clearInterval(monitoringAutoRefreshTimer);
+      monitoringAutoRefreshTimer = setInterval(() => {
+        loadMonitoringPcs(true);
+      }, 15000);
+    } else {
+      if (monitoringAutoRefreshTimer) {
+        clearInterval(monitoringAutoRefreshTimer);
+        monitoringAutoRefreshTimer = null;
+      }
+    }
+  });
 }
 
 /* ----------------------------------------------------

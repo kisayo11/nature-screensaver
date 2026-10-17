@@ -662,32 +662,74 @@
 
   <!-- 원내 PC 작동 상태 모니터링 모달 -->
   <div id="monitoringModal" class="modal-overlay" hidden>
-    <div class="modal-card wide">
+    <div class="modal-card wide" style="max-width: 860px;">
       <div class="modal-header">
         <div class="modal-title-group">
           <span class="modal-icon">🖥️</span>
-          <h3>원내 PC 화면보호기 가동 상태 모니터링</h3>
+          <div>
+            <h3 style="margin: 0; font-size: 17px;">원내 PC 화면보호기 가동 상태 모니터링</h3>
+            <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-muted);">병원 각 부서 PC의 화면보호기 설치 및 실시간 작동 현황을 관제합니다.</p>
+          </div>
         </div>
         <button id="monitoringClose" type="button" class="icon-close-btn">&times;</button>
       </div>
-      <div class="modal-body">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <div>
-            <span id="activePcCountBadge" class="status-chip success">활성 PC: 0대</span>
-            <span style="font-size: 13px; color: var(--text-muted); margin-left: 8px;">최근 24시간 내 화면보호기 동기화 핑을 보고한 PC 목록입니다.</span>
+
+      <div class="modal-body" style="padding: 18px 24px;">
+        <!-- 요약 통계 카드 4종 -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;">
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; text-align: center;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">총 등록 PC</div>
+            <div id="statTotalPc" style="font-size: 20px; font-weight: 800; color: #fff;">0대</div>
           </div>
-          <button id="refreshMonitoringBtn" type="button" class="btn btn-secondary btn-sm">🔄 새로고침</button>
+          <div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; padding: 10px 14px; text-align: center;">
+            <div style="font-size: 11px; color: #34d399; margin-bottom: 2px;">정상 가동 (Online)</div>
+            <div id="statOnlinePc" style="font-size: 20px; font-weight: 800; color: #10b981;">0대</div>
+          </div>
+          <div style="background: rgba(148,163,184,0.08); border: 1px solid rgba(148,163,184,0.25); border-radius: 8px; padding: 10px 14px; text-align: center;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">대기 중 (Offline)</div>
+            <div id="statOfflinePc" style="font-size: 20px; font-weight: 800; color: #94a3b8;">0대</div>
+          </div>
+          <div style="background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.3); border-radius: 8px; padding: 10px 14px; text-align: center;">
+            <div style="font-size: 11px; color: #60a5fa; margin-bottom: 2px;">듀얼 모니터 PC</div>
+            <div id="statDualPc" style="font-size: 20px; font-weight: 800; color: #3b82f6;">0대</div>
+          </div>
         </div>
+
+        <!-- 검색 & 필터 & 도구 바 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+          <div style="display: flex; gap: 8px; align-items: center; flex: 1; min-width: 280px;">
+            <input type="text" id="monitoringSearchInput" placeholder="🔍 PC 이름 / 사용자 검색..." style="flex: 1; padding: 7px 12px; font-size: 13px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 6px; color: #fff;">
+            <select id="monitoringStatusFilter" style="padding: 7px 10px; font-size: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 6px; color: #fff;">
+              <option value="all">전체 상태</option>
+              <option value="online">정상 가동만</option>
+              <option value="offline">대기 중만</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <label style="font-size: 12px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="monitoringAutoRefreshCheck" style="cursor: pointer;"> 15초 자동갱신
+            </label>
+            <button id="monitoringExportCsvBtn" type="button" class="btn btn-secondary btn-sm" title="병원 인증평가 제출용 PC 점검표 다운로드">
+              📥 CSV 내보내기
+            </button>
+            <button id="refreshMonitoringBtn" type="button" class="btn btn-secondary btn-sm">
+              🔄 새로고침
+            </button>
+          </div>
+        </div>
+
+        <!-- PC 목록 테이블 -->
         <div class="table-responsive" style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
           <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
-            <thead style="background: rgba(255,255,255,0.04); position: sticky; top: 0; border-bottom: 1px solid var(--border-color);">
+            <thead style="background: rgba(255,255,255,0.04); position: sticky; top: 0; z-index: 1; border-bottom: 1px solid var(--border-color);">
               <tr>
-                <th style="padding: 10px 14px;">상태</th>
-                <th style="padding: 10px 14px;">PC 이름 (컴퓨터명)</th>
-                <th style="padding: 10px 14px;">사용자 계정</th>
-                <th style="padding: 10px 14px;">모니터</th>
-                <th style="padding: 10px 14px;">적용 버전</th>
-                <th style="padding: 10px 14px;">최근 동기화</th>
+                <th style="padding: 9px 12px; width: 95px;">상태</th>
+                <th style="padding: 9px 12px;">PC 이름 (컴퓨터명)</th>
+                <th style="padding: 9px 12px;">사용자 계정</th>
+                <th style="padding: 9px 12px; width: 100px;">모니터</th>
+                <th style="padding: 9px 12px; width: 115px;">적용 버전</th>
+                <th style="padding: 9px 12px; width: 110px;">최근 동기화</th>
               </tr>
             </thead>
             <tbody id="monitoringTableBody">
@@ -699,8 +741,19 @@
             </tbody>
           </table>
         </div>
+
+        <!-- 페이지네이션 컨트롤 및 상태 안내 바 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; gap: 8px;">
+          <div id="monitoringPageInfo">
+            총 0대 중 0-0대 표시 <span id="monitoringLastUpdated" style="margin-left: 8px; opacity: 0.8;"></span>
+          </div>
+          <div id="monitoringPagination" style="display: flex; gap: 4px; align-items: center;">
+            <!-- JS 동적 생성 -->
+          </div>
+        </div>
       </div>
-      <div class="modal-footer">
+
+      <div class="modal-footer" style="padding: 12px 24px;">
         <button id="monitoringOk" type="button" class="btn btn-primary">닫기</button>
       </div>
     </div>
