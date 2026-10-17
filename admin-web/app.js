@@ -1696,6 +1696,7 @@ const openInstallerModalBtn = document.querySelector("#openInstallerModalBtn");
 const installerCloseBtn = document.querySelector("#installerClose");
 const installerOkBtn = document.querySelector("#installerOk");
 const downloadInstallerBtn = document.querySelector("#downloadInstallerBtn");
+const lockDownloadBtn = document.querySelector("#lockDownloadBtn");
 const customInstallerUrlInput = document.querySelector("#customInstallerUrlInput");
 const saveCustomInstallerUrlBtn = document.querySelector("#saveCustomInstallerUrlBtn");
 const resetInstallerUrlBtn = document.querySelector("#resetInstallerUrlBtn");
@@ -1731,13 +1732,20 @@ function getStoredInstallerUrl() {
 
 function updateInstallerModalUi() {
   const curUrl = getStoredInstallerUrl();
+  const directUrl = formatDirectDownloadUrl(curUrl);
   if (downloadInstallerBtn) {
-    downloadInstallerBtn.href = formatDirectDownloadUrl(curUrl);
+    downloadInstallerBtn.href = directUrl;
+  }
+  if (lockDownloadBtn) {
+    lockDownloadBtn.href = directUrl;
   }
   if (customInstallerUrlInput) {
     customInstallerUrlInput.value = curUrl;
   }
 }
+
+// 최초 로드 시 잠금화면 다운로드 링크 즉시 반영
+updateInstallerModalUi();
 
 if (openInstallerModalBtn && installerModal) {
   openInstallerModalBtn.addEventListener("click", () => {
