@@ -1700,8 +1700,9 @@ const customInstallerUrlInput = document.querySelector("#customInstallerUrlInput
 const saveCustomInstallerUrlBtn = document.querySelector("#saveCustomInstallerUrlBtn");
 const resetInstallerUrlBtn = document.querySelector("#resetInstallerUrlBtn");
 
-const DEFAULT_INSTALLER_URL = "https://drive.google.com/file/d/1v_elH7hGS6SwQdce8oN6IVdOXv_qTfFM/view?usp=sharing";
+const DEFAULT_INSTALLER_URL = "https://github.com/kisayo11/nature-screensaver/releases/latest/download/NatureScreensaverSetup.exe";
 const INSTALLER_URL_KEY = "nature_screensaver_installer_url";
+const LEGACY_GDRIVE_DEFAULT = "https://drive.google.com/file/d/1v_elH7hGS6SwQdce8oN6IVdOXv_qTfFM/view?usp=sharing";
 
 function formatDirectDownloadUrl(rawUrl) {
   const url = (rawUrl || "").trim();
@@ -1721,7 +1722,11 @@ function formatDirectDownloadUrl(rawUrl) {
 }
 
 function getStoredInstallerUrl() {
-  return localStorage.getItem(INSTALLER_URL_KEY) || DEFAULT_INSTALLER_URL;
+  const stored = localStorage.getItem(INSTALLER_URL_KEY);
+  if (!stored || stored === LEGACY_GDRIVE_DEFAULT) {
+    return DEFAULT_INSTALLER_URL;
+  }
+  return stored;
 }
 
 function updateInstallerModalUi() {

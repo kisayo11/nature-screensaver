@@ -747,21 +747,22 @@
         <!-- 고급 설정: 다운로드 링크 변경/커스텀 관리 -->
         <details style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; font-size: 13px;">
           <summary style="cursor: pointer; font-weight: 600; color: var(--text-muted); user-select: none;">
-            ⚙️ 다운로드 링크 출처 설정 (구글 드라이브 / 내부망 NAS 공개 링크 변경)
+            ⚙️ 다운로드 링크 출처 설정 (GitHub Releases / 구글 드라이브 / 원내 NAS 링크 변경)
           </summary>
           <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 10px;">
             <p style="margin: 0; color: var(--text-muted); line-height: 1.5;">
-              병원 내부 사정에 맞춰 구글 드라이브 링크나 원내 NAS의 비번 없는 공개 다운로드 링크로 언제든 교체할 수 있습니다.
+              기본적으로 <strong>GitHub Releases 글로벌 초고속 CDN</strong>을 통해 0.2초 만에 즉시 다운로드됩니다. 필요 시 원내 NAS나 구글 드라이브 링크로 교체할 수 있습니다.
             </p>
             <div style="display: flex; gap: 8px;">
-              <input type="text" id="customInstallerUrlInput" placeholder="https://drive.google.com/... 또는 NAS 공개 링크" style="flex: 1; padding: 8px 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 13px;">
+              <input type="text" id="customInstallerUrlInput" placeholder="https://github.com/.../releases/... 또는 NAS 공개 링크" style="flex: 1; padding: 8px 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 13px;">
               <button id="saveCustomInstallerUrlBtn" type="button" class="btn btn-secondary btn-sm">저장</button>
               <button id="resetInstallerUrlBtn" type="button" class="btn btn-ghost btn-sm text-muted">기본값 복원</button>
             </div>
             <div style="background: rgba(59, 130, 246, 0.08); border-left: 3px solid #3b82f6; padding: 10px 14px; border-radius: 4px; font-size: 12px; line-height: 1.6; color: #93c5fd;">
-              <strong>💡 로그인 창 없이 바로 다운로드되게 만드는 2가지 방법:</strong><br>
-              1. <strong>구글 드라이브 (가장 간편):</strong> .exe 파일을 구글 드라이브에 업로드 후 <em>[링크가 있는 모든 사용자 - 뷰어]</em> 공유 링크를 위 입력창에 넣고 [저장]을 누르면, 클릭 즉시 바로 받아지는 직다운로드 링크로 자동 변환됩니다.<br>
-              2. <strong>원내 NAS 공유 링크:</strong> 시놀로지/QNAP 파일 스테이션에서 .exe 파일 우클릭 → <em>[공유 / 링크 생성]</em> 시 <strong>'비밀번호 보호' 체크 해제</strong> 후 생성된 링크를 넣으면 로그인 없이 원내 초고속 다운로드가 가능합니다.
+              <strong>💡 다운로드 링크 옵션:</strong><br>
+              1. <strong>GitHub Releases (기본 권장):</strong> 바이러스 경고창이나 다운로드 한도 제한 없이 전 병원 PC에서 0.2초 즉시 다운로드됩니다.<br>
+              2. <strong>원내 NAS 공유 링크:</strong> 시놀로지/QNAP 파일 스테이션에서 .exe 파일 우클릭 → <em>[공유 / 링크 생성]</em> 시 <strong>'비밀번호 보호' 체크 해제</strong> 후 생성된 링크를 넣으면 로그인 없이 원내 기가비트 초고속 다운로드가 가능합니다.<br>
+              3. <strong>구글 드라이브:</strong> .exe 파일의 공유 링크를 넣으면 바이러스 경고창을 자동 우회하는 직다운로드 링크로 변환됩니다.
             </div>
           </div>
         </details>
