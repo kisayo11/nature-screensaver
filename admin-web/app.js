@@ -1707,14 +1707,14 @@ function formatDirectDownloadUrl(rawUrl) {
   const url = (rawUrl || "").trim();
   if (!url) return DEFAULT_INSTALLER_URL;
 
-  // 구글 드라이브 공유 링크를 클릭 시 즉시 다운로드되는 URL로 자동 변환
+  // 구글 드라이브 공유 링크를 클릭 시 바이러스 경고 페이지 우회 및 즉시 다운로드되는 URL로 자동 변환
   const gdriveMatch1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
   if (gdriveMatch1 && gdriveMatch1[1]) {
-    return `https://drive.google.com/uc?export=download&id=${gdriveMatch1[1]}`;
+    return `https://drive.usercontent.google.com/download?id=${gdriveMatch1[1]}&export=download&confirm=t`;
   }
   const gdriveMatch2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (url.includes("drive.google.com") && gdriveMatch2 && gdriveMatch2[1]) {
-    return `https://drive.google.com/uc?export=download&id=${gdriveMatch2[1]}`;
+    return `https://drive.usercontent.google.com/download?id=${gdriveMatch2[1]}&export=download&confirm=t`;
   }
 
   return url;
