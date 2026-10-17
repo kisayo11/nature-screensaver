@@ -6,6 +6,8 @@ on:
     paths:
       - 'client/**'
       - 'installer/**'
+      - 'scripts/**'
+      - '*.cmd'
       - '.github/workflows/build-screensaver.yml'
   workflow_dispatch:
 

@@ -6,8 +6,9 @@ $out = Join-Path $root "client\bin\Release\net8.0-windows\win-x64\publish"
 Copy-Item (Join-Path $out "NatureScreensaver.exe") (Join-Path $out "NatureScreensaver.scr") -Force
 Write-Host "Published self-contained build to $out"
 
+$cmdIscc = (Get-Command iscc.exe -ErrorAction SilentlyContinue)
 $isccCandidates = @(
-    (Get-Command iscc.exe -ErrorAction SilentlyContinue)?.Source,
+    $(if ($cmdIscc) { $cmdIscc.Source }),
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
     "${env:ProgramFiles}\Inno Setup 6\ISCC.exe",
     "${env:LOCALAPPDATA}\Programs\Inno Setup 6\ISCC.exe",
