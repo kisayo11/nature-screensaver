@@ -699,14 +699,24 @@
               NAS 계정 로그인이나 비밀번호 입력 없이 <strong>누구나 클릭 한 번으로 바로 다운로드</strong>됩니다.
             </p>
           </div>
-          <a id="downloadInstallerBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="padding: 12px 24px; font-size: 15px; font-weight: 700; background: #10b981; border-color: #10b981; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(16,185,129,0.35);">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            설치 프로그램 다운로드 (.exe)
-          </a>
+          <div style="display: flex; flex-direction: column; gap: 10px; align-items: stretch;">
+            <a id="downloadInstallerBtn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="padding: 12px 24px; font-size: 15px; font-weight: 700; background: #10b981; border-color: #10b981; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(16,185,129,0.35);">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              설치 프로그램 다운로드 (.exe)
+            </a>
+            <div style="display: flex; gap: 8px;">
+              <a href="downloads/화면보호기_시간설정.cmd" download="화면보호기_시간설정.cmd" class="btn btn-secondary" style="flex: 1; padding: 8px 12px; font-size: 12px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-color: rgba(59,130,246,0.4); color: #60a5fa;" title="이미 화면보호기가 설치된 PC에서 3분/5분으로 즉시 변경하는 도구">
+                <span>⏱️ 시간설정 (.cmd)</span>
+              </a>
+              <a href="downloads/Screensaver-Time-Setup.zip" download="Screensaver-Time-Setup.zip" class="btn btn-secondary" style="padding: 8px 12px; font-size: 12px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-color: rgba(255,255,255,0.15); color: var(--text-muted);" title="설정 스크립트 모음 ZIP">
+                <span>📦 ZIP</span>
+              </a>
+            </div>
+          </div>
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 20px;">
