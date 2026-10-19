@@ -1,5 +1,5 @@
 {
-  "version": "2026.10.07.1150",
+  "version": "2026.10.19.1019",
   "updateIntervalMinutes": 10,
   "slideDurationSeconds": 15,
   "backgroundColor": "#050505",
@@ -8,15 +8,15 @@
   "slides": [
     {
       "order": 1,
-      "title": "네이처요양병원_4주기인증_화면보호기 - 1번 슬라이드",
-      "fileName": "gslide_01.png",
-      "url": "https://docs.google.com/presentation/d/1wNiwzO6X5PagCwLdmOsZ7_nNubvGg8Tm_0kU0JWHuBM/export/png?id=1wNiwzO6X5PagCwLdmOsZ7_nNubvGg8Tm_0kU0JWHuBM&pageid=p1"
+      "title": "네이처요양병원_4주기인증_화면보호기 - 3번 슬라이드",
+      "fileName": "gslide_03.png",
+      "url": "https://nature-screensaver.vercel.app/slides/gslide_03.png"
     },
     {
       "order": 2,
-      "title": "네이처요양병원_4주기인증_화면보호기 - 2번 슬라이드",
-      "fileName": "gslide_02.png",
-      "url": "https://docs.google.com/presentation/d/1wNiwzO6X5PagCwLdmOsZ7_nNubvGg8Tm_0kU0JWHuBM/export/png?id=1wNiwzO6X5PagCwLdmOsZ7_nNubvGg8Tm_0kU0JWHuBM&pageid=p2"
+      "title": "네이처요양병원_4주기인증_화면보호기 - 4번 슬라이드",
+      "fileName": "gslide_04.png",
+      "url": "https://nature-screensaver.vercel.app/slides/gslide_04.png"
     },
     {
       "order": 3,
