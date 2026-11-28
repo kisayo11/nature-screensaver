@@ -1211,7 +1211,7 @@ function loadDraft() {
     version: "2026.07.27.001",
     updateIntervalMinutes: 60,
     slideDurationSeconds: 20,
-    notice: "4주기 의료기관 인증평가 준비",
+    notice: "ㅤ",
     slides: [
       { order: 1, title: "환자권리 존중 및 보호", fileName: "01_patient_rights.png", url: "" },
       { order: 2, title: "정확한 환자확인 절차", fileName: "02_patient_identification.png", url: "" },
