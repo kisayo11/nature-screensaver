@@ -113,8 +113,8 @@ module.exports = async (req, res) => {
       const idx = parseInt(m[2], 10);
       // 마스터 레이아웃 키워드 제외
       if (['geometric', 'gameday'].includes(pageId)) continue;
-      // p 또는 g로 시작하는 유효 슬라이드만 포함
-      if (/^(p\d+|g[a-zA-Z0-9_]+)$/.test(pageId)) {
+      // p, g 및 API 생성(slide_, SLIDES_API) 유효 슬라이드 포함
+      if (/^(p\d+|g[a-zA-Z0-9_-]+|slide_[a-zA-Z0-9_-]+|SLIDES_API[a-zA-Z0-9_-]+)$/.test(pageId)) {
         if (!seenPages.has(pageId)) {
           seenPages.add(pageId);
           pageEntries.push({ pageId, idx });
