@@ -1,5 +1,5 @@
 {
-  "version": "2026.11.28.1921",
+  "version": "2026.11.28.1922",
   "updateIntervalMinutes": 10,
   "slideDurationSeconds": 15,
   "backgroundColor": "#050505",
@@ -12,7 +12,5 @@
       "fileName": "gslide_03.png",
       "url": "https://nature-screensaver.vercel.app/slides/gslide_03.png"
     }
-  ],
-  "dDayTitle": "4주기 인증평가",
-  "dDayDate": "2026-11-25"
+  ]
 }
